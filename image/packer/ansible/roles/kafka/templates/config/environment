@@ -1,0 +1,3 @@
+LOG_DIR={{ kafka_logging_path }}
+KAFKA_LOG4J_OPTS="-Dlog4j.configuration=file:{{ kafka_install_path }}/config/log4j.properties"
+KAFKA_OPTS="-Djava.net.preferIPv4Stack=True -XX:ErrorFile={{ kafka_logging_path }}/hs_err_pid%p.log -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath={{ kafka_logging_path }}/"

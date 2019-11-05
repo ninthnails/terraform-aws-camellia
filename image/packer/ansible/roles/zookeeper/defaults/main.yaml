@@ -1,0 +1,8 @@
+zookeeper_version: 3.5.6
+zookeeper_dist_url: http://www-us.apache.org/dist/zookeeper
+zookeeper_install_path: /opt/zookeeper
+zookeeper_logging_path: /var/log/zookeeper
+zookeeper_data_path: /var/zookeeper/data
+zookeeper_logs_path: /var/zookeeper/logs
+zookeeper_node_id: 1
+zookeeper_user: zookeeper

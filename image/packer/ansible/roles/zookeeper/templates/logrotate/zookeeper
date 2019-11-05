@@ -1,0 +1,12 @@
+{{ zookeeper_logging_path }}/daemon.out {{ zookeeper_logging_path }}/hs_err_pid*.log {{ zookeeper_logging_path }}/java_pid*.hprof {
+    daily
+    rotate 5
+    compress
+    missingok
+    nocopy
+    nocopytruncate
+    nocreate
+    nodelaycompress
+    notifempty
+    maxage 15
+}

@@ -1,0 +1,62 @@
+---
+- name: Create user
+  user:
+    name: "{{ kafka_manager_user }}"
+    create_home: no
+
+- name: Create directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_manager_user }}"
+    group: "{{ kafka_manager_user }}"
+  loop:
+    - "{{ kafka_manager_install_path }}"
+    - "{{ kafka_manager_logging_path }}"
+
+- name: Build Kafka Manager
+  include: build.yaml
+
+- name: Create temporary directory
+  tempfile:
+    state: directory
+  register: temp_dir
+
+- name: Unpack archive
+  unarchive:
+    src: "{{ kafka_manager_archive_path }}"
+    dest: "{{ temp_dir.path }}/"
+    owner: "{{ kafka_manager_user }}"
+    group: "{{ kafka_manager_user }}"
+    creates: "{{ temp_dir.path }}/kafka-manager-{{ kafka_manager_version }}"
+
+- name: Move files
+  shell: "mv -f {{ temp_dir.path }}/kafka-manager-{{ kafka_manager_version }}/* {{ kafka_manager_install_path }}/"
+  args:
+    creates: "{{ kafka_manager_install_path }}/bin/kafka-manager"
+
+- name: Change permissions
+  file:
+    path: "{{ kafka_manager_install_path }}"
+    recurse: yes
+    owner: "{{ kafka_manager_user }}"
+    group: "{{ kafka_manager_user }}"
+
+- name: Setup configuration
+  template:
+    src: "conf/{{ item }}"
+    dest: "{{ kafka_manager_install_path }}/conf/{{ item }}"
+    owner: "{{ kafka_manager_user }}"
+    group: "{{ kafka_manager_user }}"
+    mode: 0644
+  loop:
+    - application.conf
+    - environment
+    - logback.xml
+
+- name: Install service units
+  template:
+    src: systemd/kafkamanager.service
+    dest: /etc/systemd/system/kafkamanager.service
+    owner: root
+    mode: 0644

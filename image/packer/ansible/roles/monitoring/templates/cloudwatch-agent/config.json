@@ -1,0 +1,46 @@
+{
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "log_group_name": "{{ amz_cw_agent_kafka_log_group_name }}",
+            "file_path": "{{ amz_cw_agent_kafka_loggin_path }}/server.log",
+            "log_stream_name": "server_{instance_id}_{ip_address}",
+            "timestamp_format":"%Y-%m-%d %H:%M:%S"
+          },
+	      {
+            "log_group_name": "{{ amz_cw_agent_kafka_log_group_name }}",
+            "file_path": "{{ amz_cw_agent_kafka_loggin_path }}/log-cleaner.log",
+            "log_stream_name": "cleaner_{instance_id}_{ip_address}",
+            "timestamp_format":"%Y-%m-%d %H:%M:%S"
+          },
+	      {
+            "log_group_name": "{{ amz_cw_agent_kafka_log_group_name }}",
+            "file_path": "{{ amz_cw_agent_kafka_loggin_path }}/state-change.log",
+            "log_stream_name": "state_{instance_id}_{ip_address}",
+            "timestamp_format":"%Y-%m-%d %H:%M:%S"
+          },
+	      {
+            "log_group_name": "{{ amz_cw_agent_kafka_log_group_name }}",
+            "file_path": "{{ amz_cw_agent_kafka_loggin_path }}/request.log",
+            "log_stream_name": "request_{instance_id}_{ip_address}",
+            "timestamp_format":"%Y-%m-%d %H:%M:%S"
+          },
+	      {
+            "log_group_name": "{{ amz_cw_agent_kafka_log_group_name }}",
+            "file_path": "{{ amz_cw_agent_kafka_loggin_path }}/controller.log",
+            "log_stream_name": "controller_{instance_id}_{ip_address}",
+            "timestamp_format":"%Y-%m-%d %H:%M:%S"
+          },
+	      {
+            "log_group_name": "{{ amz_cw_agent_kafka_log_group_name }}",
+            "file_path": "{{ amz_cw_agent_kafka_loggin_path }}/authorizer.log",
+            "log_stream_name": "authorizer_{instance_id}_{ip_address}",
+            "timestamp_format":"%Y-%m-%d %H:%M:%S"
+          }
+        ]
+      }
+    }
+  }
+}

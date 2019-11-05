@@ -1,0 +1,8 @@
+all:
+  children:
+    dev:
+      hosts:
+        localhost:
+          ansible_port: 2222
+          ansible_user: ec2-user
+          ansible_become: yes

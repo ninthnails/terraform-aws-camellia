@@ -1,0 +1,48 @@
+---
+- name: Install EPEL repo
+  command: /bin/amazon-linux-extras install -y epel
+  when: ansible_distribution == 'Amazon'
+
+- name: Import EPEL GPG Key
+  rpm_key:
+    key: http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+
+- name: Disable EPEL repo
+  ini_file:
+    path: /etc/yum.repos.d/epel.repo
+    section: epel
+    option: enabled
+    value: 0
+
+- name: Install collectd packages
+  yum:
+    name:
+      - collectd
+      - collectd-zookeeper
+    enablerepo: epel
+    state: latest
+
+- name: Configure collectd
+  template:
+    src: collectd.d/10_base.conf
+    dest: /etc/collectd.d/10_base.conf
+    owner: root
+    mode: 0644
+
+- name: Enable collectd service
+  service:
+    name: collectd
+    enabled: yes
+    state: restarted
+
+- name: Install Amazon CloudWatch Agent package
+  package:
+    name: "{{ amz_cw_agent_package_url }}"
+
+- name: Amazon CloudWatch Agent config
+  template:
+    src: cloudwatch-agent/config.json
+    dest: /opt/aws/amazon-cloudwatch-agent/bin/config.json
+    owner: root
+    mode: 0644
+

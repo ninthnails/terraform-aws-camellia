@@ -1,0 +1,47 @@
+---
+- name: Clean cloud-init logs
+  command: /usr/bin/cloud-init clean --logs --seed
+  args:
+    removes: /var/log/cloud-init.log
+
+- name: Clean Kafka and Zookeeper state
+  shell: |
+    /bin/rm -rf {{ zookeeper_logging_path }}/* {{ zookeeper_data_path }}/* {{ zookeeper_logs_path }}/* ;
+    /bin/rm -rf {{ kafka_logging_path }}/* {{ kafka_log_dirs_path | dirname }} ;
+  args:
+    removes: "{{ kafka_logging_path }}/server.log"
+    warn: False
+
+- name: Clean all yum caches
+  command: /usr/bin/yum clean all -y
+  args:
+    warn: False
+
+- name: Clean temp folder
+  shell: /bin/rm -rf /tmp/* ;
+  args:
+    warn: False
+
+- name: Delete yum cache
+  file:
+    path: /var/cache/yum
+    state: absent
+
+- name: Remove system keys
+  shell: /bin/shred -u /etc/ssh/*_key /etc/ssh/*_key.pub
+  args:
+    removes: /etc/ssh/ssh_host_rsa_key
+
+- name: Delete SSM logs
+  file:
+    path: /var/log/amazon/ssm
+    state: absent
+
+- name: Clean OS logs
+  shell: |
+    /bin/shred -u /var/log/messages /var/log/secure /var/log/lastlog /var/log/yum.log ;
+    /usr/bin/journalctl --flush ;
+    /usr/bin/journalctl --vacuum-time=1s --vacuum-time=1K ;
+    /usr/bin/dmesg --clear ;
+  args:
+    removes: /var/log/messages

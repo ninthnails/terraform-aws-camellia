@@ -1,0 +1,16 @@
+[Unit]
+Description=LinkedIn Cruise Control for Apache Kafka
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ cruise_control_install_path }}
+ExecStart={{ cruise_control_install_path }}/kafka-cruise-control-start.sh {{ cruise_control_install_path }}/config/cruisecontrol.properties {{ cruise_control_webserver_port }}
+KillMode=process
+Restart=on-failure
+RestartSec=500ms
+User={{ cruise_control_user }}
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

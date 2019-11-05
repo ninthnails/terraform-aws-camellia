@@ -1,0 +1,20 @@
+[Unit]
+Description=Apache Kafka
+After=network-online.target kafka-storage.service
+Requires=kafka-storage.service
+
+[Service]
+Type=simple
+WorkingDirectory={{ kafka_install_path }}
+EnvironmentFile={{ kafka_install_path }}/config/environment
+ExecStart={{ kafka_install_path }}/bin/kafka-server-start.sh {{ kafka_install_path }}/config/server.properties
+KillMode=process
+Restart=on-failure
+RestartSec=250ms
+User={{ kafka_user }}
+NoNewPrivileges=true
+OOMScoreAdjust=-999
+LimitNOFILE={{ 96704 * 3 }}
+
+[Install]
+WantedBy=multi-user.target

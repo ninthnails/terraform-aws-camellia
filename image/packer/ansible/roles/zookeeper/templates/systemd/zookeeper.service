@@ -1,0 +1,19 @@
+[Unit]
+Description=Apache Zookeeper
+After=network-online.target
+After=network-online.target cloud-final.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ zookeeper_install_path }}
+ExecStart={{ zookeeper_install_path }}/bin/zkServer.sh start-foreground
+KillMode=process
+Restart=on-failure
+RestartSec=250ms
+User={{ zookeeper_user }}
+NoNewPrivileges=true
+OOMScoreAdjust=-999
+LimitNOFILE={{ 96704 * 3 }}
+
+[Install]
+WantedBy=multi-user.target

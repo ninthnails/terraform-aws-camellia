@@ -1,0 +1,13 @@
+---
+- name: Download archive
+  unarchive:
+    src: "{{ kafka_manager_dist_url }}/{{ kafka_manager_version }}.tar.gz"
+    remote_src: yes
+    dest: "{{ kafka_manager_build_path }}"
+  delegate_to: 127.0.0.1
+
+- name: Build main distribution
+  command: ./sbt -Dsbt.log.noformat=false dist
+  args:
+    chdir: "{{ kafka_manager_build_path }}/kafka-manager-{{ kafka_manager_version }}"
+  delegate_to: 127.0.0.1

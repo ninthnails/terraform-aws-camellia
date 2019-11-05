@@ -1,0 +1,12 @@
+kafka_version: 2.3.1
+kafka_api_version: "{{ kafka_version[0:3] }}"
+kafka_dist_urls:
+  - http://apache.mirrors.pair.com/kafka
+  - https://www-us.apache.org/dist/kafka
+kafka_install_path: /opt/kafka
+kafka_logging_path: /var/log/kafka
+kafka_data_path: /var/kafka
+kafka_log_dirs_path: "{{ kafka_data_path }}/data0/logs"
+kafka_user: kafka
+kafka_broker_id: 1
+kafka_broker_rack: rack1

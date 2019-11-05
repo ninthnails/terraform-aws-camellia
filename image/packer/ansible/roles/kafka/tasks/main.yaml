@@ -1,0 +1,104 @@
+---
+- name: Create user
+  user:
+    name: "{{ kafka_user }}"
+    create_home: no
+
+- name: Copy sysctl config
+  copy:
+    src: sysctl.d/
+    dest: /etc/sysctl.d/
+    owner: root
+    group: root
+    mode: 0440
+
+- name: Configure security limits
+  pam_limits:
+    domain: "{{ kafka_user }}"
+    dest: "/etc/security/limits.d/80-{{ kafka_user }}.conf"
+    limit_item: "{{ item.item }}"
+    limit_type: "{{ item.type }}"
+    value: "{{ item.value }}"
+  loop:
+    - { item: as,      type: soft, value: unlimited }
+    - { item: as,      type: hard, value: unlimited }
+    - { item: core,    type: soft, value: unlimited }
+    - { item: core,    type: hard, value: unlimited }
+    - { item: nofile,  type: soft, value: 100000 }
+    - { item: nofile,  type: hard, value: 100000 }
+    - { item: memlock, type: soft, value: unlimited }
+    - { item: memlock, type: hard, value: unlimited }
+
+- name: Create directories
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+  loop:
+    - { path: "{{ kafka_install_path }}", owner: "{{ kafka_user }}" }
+    - { path: "{{ kafka_data_path }}", owner: root }
+    - { path: "{{ kafka_log_dirs_path }}", owner: "{{ kafka_user }}" }
+    - { path: "{{ kafka_logging_path }}", owner: "{{ kafka_user }}" }
+
+- name: Download archive
+  unarchive:
+    src: "{{ item }}/{{ kafka_version }}/kafka_2.12-{{ kafka_version }}.tgz"
+    remote_src: yes
+    dest: "{{ kafka_install_path }}"
+    extra_opts:
+      - --strip-components=1
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_user }}"
+    creates: "{{ kafka_install_path }}/bin"
+  loop: "{{ kafka_dist_urls }}"
+
+- name: Add binaries to PATH
+  copy:
+    dest: /etc/profile.d/kafka.sh
+    content: "export PATH=${PATH}:{{ kafka_install_path }}/bin"
+    owner: root
+    mode: 0755
+
+- name: Setup program configuration
+  template:
+    src: "config/{{ item }}"
+    dest: "{{ kafka_install_path }}/config/{{ item }}"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_user }}"
+    mode: 0644
+  loop:
+    - environment
+    - log4j.properties
+    - server.properties
+
+- name: Customize start script
+  replace:
+    path: "{{ kafka_install_path }}/bin/kafka-server-start.sh"
+    regexp: '(    HEAP_SIZE=.*\n)?(    )export KAFKA_HEAP_OPTS="[^"]+"'
+    replace: \g<2>HEAP_SIZE=$(/usr/bin/free -m | awk '/^Mem/{print int($2 * 0.2)}')m\n\g<2>export KAFKA_HEAP_OPTS="-Xms${HEAP_SIZE} -Xmx${HEAP_SIZE}"
+
+- name: Setup log rotate
+  template:
+    src: "logrotate/kafka"
+    dest: "/etc/logrotate.d/kafka"
+    owner: root
+    mode: 0644
+
+- name: Install service units
+  template:
+    src: "systemd/{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    mode: 0644
+  loop:
+    - kafka.service
+    - kafka-storage.service
+
+- name: Storage script
+  template:
+    src: usr/local/sbin/kafka-storage.sh
+    dest: /usr/local/sbin/
+    owner: root
+    group: root
+    mode: 0744

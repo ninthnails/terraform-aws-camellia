@@ -1,0 +1,10 @@
+collectd_hostname: "{{ ansible_hostname }}"
+collectd_file_count_paths: []
+collectd_processes: []
+collectd_writers: {}
+
+amz_cw_agent_package_url: https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+amz_cw_agent_kafka_log_group_name: /aws/ec2/kafka
+amz_cw_agent_kafka_loggin_path: /var/log/kafka
+amz_cw_agent_zookeeper_log_group_name: /aws/ec2/zookeeper
+amz_cw_agent_zookeeper_loggin_path: /var/log/zookeeper

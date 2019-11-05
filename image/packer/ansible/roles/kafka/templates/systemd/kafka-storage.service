@@ -1,0 +1,14 @@
+[Unit]
+Description=Initialize Apache Kafka Storage
+After=network-online.target
+Before=kafka.service
+
+[Service]
+Type=oneshot
+EnvironmentFile={{ kafka_install_path }}/config/environment
+ExecStart=/usr/local/sbin/kafka-storage.sh
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=kafka.service

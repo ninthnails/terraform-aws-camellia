@@ -1,0 +1,17 @@
+[Unit]
+Description=Yahoo Kafka Manager
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ kafka_manager_install_path }}
+EnvironmentFile={{ kafka_manager_install_path }}/conf/environment
+ExecStart={{ kafka_manager_install_path }}/bin/kafka-manager
+KillMode=process
+Restart=on-failure
+RestartSec=500ms
+User={{ kafka_manager_user }}
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

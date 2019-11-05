@@ -1,0 +1,153 @@
+---
+- name: Get service status
+  service_facts:
+
+- name: Is sshd running?
+  assert:
+    that: ansible_facts.services['sshd.service'].state == 'running'
+
+- name: Is nscd running?
+  assert:
+    that: ansible_facts.services['nscd.service'].state == 'running'
+
+- name: Get swap memory info
+  shell: "free | grep Swap | awk '/^Swap/{print $2}'"
+  register: memory_swap_check
+
+- name: Is swap memory available?
+  assert:
+    that: memory_swap_check.stdout | int > 0
+
+- name: Is Java installed?
+  command: java --version
+
+- name: Do kafka user exists?
+  command: "id -u {{ kafka_user }}"
+
+- name: Do zookeeper user exists?
+  command: "id -u {{ zookeeper_user }}"
+
+- name: Do cruise user exists?
+  command: "id -u {{ cruise_control_user }}"
+
+- name: Get Cruise Control install info
+  stat:
+    path: "{{ cruise_control_install_path }}"
+    follow: yes
+  register: cruise_control_install_check
+
+- name: Is Cruise Control installed?
+  assert:
+    that: cruise_control_install_check.stat.isdir is defined and cruise_control_install_check.stat.isdir
+
+- name: Get Zookeeper install info
+  stat:
+    path: "{{ zookeeper_install_path }}"
+    follow: yes
+  register: zookeeper_install_check
+
+- name: Is Zookeeper installed?
+  assert:
+    that: zookeeper_install_check.stat.isdir is defined and zookeeper_install_check.stat.isdir
+
+- name: Backup Kafka configuration
+  copy:
+    src: "{{ kafka_install_path }}/config/server.properties"
+    dest: "{{ kafka_install_path }}/config/server.properties.back"
+    remote_src: yes
+
+- name: Configure Kafka for verification
+  replace:
+    path: "{{ kafka_install_path }}/config/server.properties"
+    regexp: "{{ item[0] }}"
+    replace: "{{ item[1] }}"
+  loop:
+    - ['num\.partitions=\d', "num.partitions=1"]
+    - ['default\.replication\.factor=\d', "default.replication.factor=1"]
+    - ['min\.insync\.replicas=\d', "min.insync.replicas=1"]
+    - ['offsets\.topic\.replication\.factor=\d', "offsets.topic.replication.factor=1"]
+    - ['transaction\.state\.log\.replication\.factor=\d', "transaction.state.log.replication.factor=1"]
+    - ['transaction\.state\.log\.min\.isr=\d', "transaction.state.log.min.isr=1"]
+
+- name: Smoke test Zookeeper and Kafka services
+  block:
+    - name: Enable Zookeeper service
+      service:
+        name: zookeeper
+        enabled: yes
+        state: started
+
+    - name: Is Zookeeper running?
+      wait_for:
+        delay: 3
+        port: 2181
+        timeout: 10
+
+    - name: Enable Kafka service
+      service:
+        name: kafka
+        enabled: yes
+        state: started
+
+    - name: Is Kafka running?
+      wait_for:
+        delay: 5
+        port: 9092
+        timeout: 10
+
+  always:
+    - name: Stop and disable back Kafka service
+      service:
+        name: kafka
+        enabled: no
+        state: stopped
+
+    - name: Reset Kafka service state
+      command: systemctl reset-failed kafka
+
+    - name: Stop and disable back Zookeeper service
+      service:
+        name: zookeeper
+        enabled: no
+        state: stopped
+
+    - name: Reset Zookeeper service state
+      command: systemctl reset-failed zookeeper
+
+    - name: Revert Kafka configuration
+      copy:
+        src: "{{ kafka_install_path }}/config/server.properties.back"
+        dest: "{{ kafka_install_path }}/config/server.properties"
+        remote_src: yes
+
+    - name: Remove backup Kafka configuration
+      file:
+        path: "{{ kafka_install_path }}/config/server.properties.back"
+        state: absent
+
+- name: Get service status
+  service_facts:
+
+- name: Is Zookeeper service disabled?
+  assert:
+    that: "'zookeeper.service' not in ansible_facts.services"
+
+- name: Is Kafka service disabled?
+  assert:
+    that: "'kafka.service' not in ansible_facts.services"
+
+- name: Is Cruise Control service disabled?
+  assert:
+    that: "'cruisecontrol.service' not in ansible_facts.services"
+
+- name: Is Kafka Manager service disabled?
+  assert:
+    that: "'kafkamanager.service' not in ansible_facts.services"
+
+- name: Is amazon-ssm-agent running?
+  assert:
+    that: ansible_facts.services['amazon-ssm-agent.service'].state == 'running'
+
+- name: Is collectd running?
+  assert:
+    that: ansible_facts.services['collectd.service'].state == 'running'

@@ -1,0 +1,5 @@
+collectd_hostname: "packer.{{ ansible_hostname }}"
+collectd_writers:
+  networks:
+    - host: collectd
+      port: 25827

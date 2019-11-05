@@ -1,0 +1,16 @@
+---
+- name: Build Kafka AMI
+  hosts: all
+  become: yes
+  gather_facts: yes
+#  vars_files:
+#    - roles/kafka/defaults/main.yaml
+  roles:
+    - system
+    - zookeeper
+    - kafka
+    - cruise-control
+    - kafka-manager
+    - monitoring
+    - verify
+    - finalize

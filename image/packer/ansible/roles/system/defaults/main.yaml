@@ -1,0 +1,5 @@
+swap_file_location: /var/swap
+swap_file_size: 2G
+swap_file_path: "{{ swap_file_location }}/file01_{{ swap_file_size }}"
+
+java_networkaddress_cache_ttl: 3600

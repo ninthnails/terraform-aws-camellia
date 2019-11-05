@@ -1,0 +1,101 @@
+---
+# When DHCP contains multiple domain names, metadata API appends all of them to the (short) hostname.
+# Hostname get incorrectly set and things start to break.
+- name: Fix hostname
+  shell: |
+    /usr/bin/hostnamectl set-hostname $(/usr/bin/ipcalc --hostname {{ ansible_default_ipv4.address }} | cut -d= -f2) ;
+    /usr/bin/hostnamectl ;
+    /usr/bin/hostname ;
+
+# TODO Found a better way to handle polluted EC2 metadata hostname
+- name: Patch cloud-init set-hostname module
+  copy:
+    src: cloudinit/cc_set_hostname.py
+    dest: /usr/lib/python2.7/site-packages/cloudinit/config/cc_set_hostname.py
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Patch system
+  yum:
+    name: '*'
+    state: latest
+
+- name: Install packages
+  package:
+    name:
+      - nscd
+    state: latest
+
+- name: Copy ncsd config
+  copy:
+    src: nscd/nscd.conf
+    dest: /etc/nscd.conf
+    owner: root
+    group: root
+    mode: 0440
+
+- name: Enable nscd service
+  service:
+    name: nscd
+    enabled: yes
+    state: restarted
+
+- name: Configure cloud-init
+  copy:
+    src: cloud.cfg.d/
+    dest: /etc/cloud/cloud.cfg.d/
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Swap detection
+  set_fact:
+    swap_available: "{{ ansible_swaptotal_mb > 0 }}"
+
+- name: Create swap directory
+  file:
+    path: "{{ swap_file_location }}"
+    state: directory
+    owner: root
+    mode: 0700
+
+- name: Allocate swap file
+  command: "fallocate -l {{ swap_file_size }} {{ swap_file_path }}"
+  args:
+    creates: "{{ swap_file_path }}"
+  when: not swap_available
+  register: swap_creation
+
+- name: Set swap file permissions
+  file:
+    path: "{{ swap_file_path }}"
+    owner: root
+    mode: 0600
+  when: swap_creation.changed
+
+- name: Make swap file system
+  command: "mkswap {{ swap_file_path }}"
+  when: swap_creation.changed
+
+- name: Enable swap file
+  command: "swapon {{ swap_file_path }}"
+  when: swap_creation.changed
+
+- name: Configure swap file mounting
+  lineinfile:
+    line: "{{ swap_file_path }} swap swap defaults 0 0"
+    path: /etc/fstab
+  when: swap_creation.changed
+
+- name: Install OpenJDK 11
+  command: /bin/amazon-linux-extras install -y java-openjdk11
+  args:
+    creates: /usr/lib/jvm/jre-11-openjdk
+  when: ansible_distribution == 'Amazon'
+
+- name: Change Java network address cache TTL
+  replace:
+    path: /usr/lib/jvm/jre/conf/security/java.security
+    regexp: '#networkaddress\.cache\.ttl=-1'
+    replace: "networkaddress.cache.ttl={{ java_networkaddress_cache_ttl }}"
