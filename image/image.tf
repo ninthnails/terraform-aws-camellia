@@ -12,10 +12,6 @@ variable "subnet_ids" {
   type = list(string)
 }
 
-variable "security_group_ids" {
-  type = list(string)
-}
-
 variable "packer_template" {
   default = "aws-default.json"
 }
@@ -40,6 +36,10 @@ provider "archive" {
 # Data and local variables
 #################
 data "aws_region" "current" {}
+
+data "aws_vpc" "this" {
+  id = var.vpc_id
+}
 
 locals {
   bucket_name = "${var.prefix}-image-${data.aws_region.current.name}-${random_id.s3.hex}"
@@ -267,6 +267,20 @@ resource "aws_cloudwatch_log_group" "packer" {
   retention_in_days = 7
 }
 
+resource "aws_security_group" "codebuild-egress" {
+  name_prefix = "${var.prefix}-kafka-codebuild-"
+  description = "Group that CodeBuild uses to allow access to resources in the VPC and the Internet."
+  vpc_id = var.vpc_id
+  egress {
+    from_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+    to_port = 0
+  }
+  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-codebuild"))
+}
+
 resource "aws_codebuild_project" "packer" {
   name = "${var.prefix}-kafka-automation-packer"
   description = "Runs Packer to build AMI"
@@ -301,6 +315,10 @@ phases:
     commands:
       - ./packer validate
         -var region=${data.aws_region.current.name}
+        -var vpc_id=${data.aws_vpc.this.id}
+        -var vpc_cidr=${data.aws_vpc.this.cidr_block}
+        -var subnet_id=${var.subnet_ids[0]}
+        -var ami_base_name=${var.prefix}
         -var iam_instance_profile=${aws_iam_instance_profile.packer.name}
         -var instance_type=${var.packer_instance_type}
         -var source_version=$${CODEBUILD_SOURCE_VERSION-LATEST}
@@ -310,6 +328,10 @@ phases:
     commands:
       - ./packer build -color=false
         -var region=${data.aws_region.current.name}
+        -var vpc_id=${data.aws_vpc.this.id}
+        -var vpc_cidr=${data.aws_vpc.this.cidr_block}
+        -var subnet_id=${var.subnet_ids[0]}
+        -var ami_base_name=${var.prefix}
         -var iam_instance_profile=${aws_iam_instance_profile.packer.name}
         -var instance_type=${var.packer_instance_type}
         -var source_version=$${CODEBUILD_SOURCE_VERSION-LATEST}
@@ -323,7 +345,7 @@ EOF
   tags = var.tags
 
   vpc_config {
-    security_group_ids = var.security_group_ids
+    security_group_ids = [aws_security_group.codebuild-egress.id]
     subnets = var.subnet_ids
     vpc_id = var.vpc_id
   }
@@ -347,10 +369,6 @@ resource "aws_s3_bucket_object" "sources" {
 #################
 # Outputs
 #################
-output "name" {
-  value = basename(path.module)
-}
-
 output "bucket_name" {
   value = local.bucket_name
 }
