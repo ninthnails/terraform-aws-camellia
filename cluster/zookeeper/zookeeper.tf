@@ -15,7 +15,7 @@ variable "prefix" {
 variable "ami_id" {
 }
 
-variable "key_name" {
+variable "key_pair_name" {
 }
 
 variable "cluster_size" {
@@ -24,7 +24,7 @@ variable "cluster_size" {
 }
 
 variable "instance_type" {
-  default = "t2.micro"
+  default = "t3a.nano"
 }
 
 variable "follower_port" {
@@ -173,7 +173,7 @@ resource "aws_launch_template" "node" {
   name_prefix = "${var.prefix}-kafka-zookeeper-${count.index}-"
   image_id = var.ami_id
   instance_type = var.instance_type
-  key_name = var.key_name
+  key_name = var.key_pair_name
   network_interfaces {
     associate_public_ip_address = false
     delete_on_termination = false

@@ -25,10 +25,13 @@ variable "public_zone_id" {
 }
 
 variable "allowed_cidrs" {
-  type = list(string)
-  default = [
-    "10.0.0.0/16"
-  ]
+  type = map(list(string))
+  default = {
+    ipv4 = [
+      "10.0.0.0/16"
+    ]
+    ipv6 = []
+  }
 }
 
 variable "key_pair_name" {
@@ -38,8 +41,16 @@ variable "camellia_ami_id" {
   type = string
 }
 
+variable "zookeeper_instance_type" {
+  default = "t3a.nano"
+}
+
+variable "zookeeper_cluster_size" {
+  default = 1
+}
+
 variable "kafka_instance_type" {
-  default = "t3a.micro"
+  default = "t3a.nano"
 }
 
 variable "kafka_storage_type" {
@@ -54,8 +65,12 @@ variable "kafka_storage_volume_size" {
   default = 1
 }
 
-variable "manager_storage_type" {
-  default = "t3a.medium"
+variable "manager_instance_type" {
+  default = "t3a.nano"
+}
+
+variable "kafka_cluster_size" {
+  default = 1
 }
 
 variable "tags" {
@@ -72,8 +87,9 @@ module "zookeeper" {
   vpc_id = var.vpc_id
   subnet_ids = var.private_subnet_ids
   ami_id = var.camellia_ami_id
-  key_name = var.key_pair_name
-  cluster_size = 3
+  key_pair_name = var.key_pair_name
+  instance_type = var.zookeeper_instance_type
+  cluster_size = var.zookeeper_cluster_size
   tags = var.tags
 }
 
@@ -85,6 +101,7 @@ module "kafka" {
   public_subnet_ids = var.public_subnet_ids
   key_pair_name = var.key_pair_name
   ami_id = var.camellia_ami_id
+  cluster_size = var.kafka_cluster_size
   zookeeper_connect = module.zookeeper.zookeeper_connect
   private_zone_ids = var.private_zone_ids
   instance_type = var.kafka_instance_type
@@ -100,8 +117,8 @@ module "manager" {
   private_subnet_ids = var.private_subnet_ids
   public_subnet_ids = var.public_subnet_ids
   key_pair_name = var.key_pair_name
-  lb_allowed_cidrs = var.allowed_cidrs
-  instance_type = var.manager_storage_type
+  allowed_cidrs = var.allowed_cidrs
+  instance_type = var.manager_instance_type
   kafka_bootstrap_servers = module.kafka.bootstrap_servers_private
   kafka_zookeeper_connect = module.kafka.zookeeper_kafka_connect
   zookeeper_connect = module.zookeeper.zookeeper_connect
@@ -115,8 +132,8 @@ module "manager" {
 #################
 # Outputs
 #################
-output "zookeeper_connect" {
-  value = module.zookeeper.zookeeper_connect
+output "zookeeper_kafka_connect" {
+  value = module.kafka.zookeeper_kafka_connect
 }
 
 output "kafka_bootstrap_servers_private" {
