@@ -47,6 +47,7 @@ variable "allowed_cidrs" {
 }
 
 variable "public_zone_id" {
+  default = ""
 }
 
 variable "cruise_control_port" {
@@ -59,6 +60,10 @@ variable "kafka_manager_port" {
 
 variable "kafka_broker_ids" {
   type = list(string)
+}
+
+variable "kafka_cluster_size" {
+  type = number
 }
 
 variable "kafka_storage_volume_size" {
@@ -237,6 +242,8 @@ data "template_file" "user_data" {
     capacity = "{ \"brokerCapacities\":[ ${local.capacity_default},${join(",", local.capacity_brokers)} ] }"
     cluster_name = "${var.prefix}-kafka"
     api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "http://${aws_eip.public[0].public_ip}:${var.cruise_control_port}")
+    cruise_control_enabled = var.kafka_cluster_size > 1
+    topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
   }
 }
 
@@ -248,6 +255,10 @@ resource "aws_instance" "server" {
     aws_security_group.private.id
   ]
   key_name = var.key_pair_name
+  ebs_optimized = false
+  credit_specification {
+    cpu_credits = "standard"
+  }
 
   user_data = data.template_file.user_data.rendered
 

@@ -174,6 +174,9 @@ resource "aws_launch_template" "node" {
   image_id = var.ami_id
   instance_type = var.instance_type
   key_name = var.key_pair_name
+  credit_specification {
+    cpu_credits = "standard"
+  }
   network_interfaces {
     associate_public_ip_address = false
     delete_on_termination = false

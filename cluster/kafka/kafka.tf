@@ -63,6 +63,7 @@ variable "zookeeper_connect" {
 
 variable "private_zone_ids" {
   type = list(string)
+  default = []
 }
 
 variable "tags" {
@@ -258,8 +259,10 @@ data "template_file" "user_data" {
 
     broker_id = local.broker_ids[count.index]
     broker_rack = element(data.aws_subnet.private.*.availability_zone, count.index % length(data.aws_subnet.private.*.availability_zone))
+    default_replication_factor = var.cluster_size < 3 ? var.cluster_size : 3
+    min_insync_replicas = var.cluster_size < 2 ? 1 : 2
     zookeeper = local.zookeeper_connect
-    bootstrap_servers = "PLAINTEXT://${aws_route53_record.private[0].fqdn}:${var.broker_port}"
+    bootstrap_servers = "PLAINTEXT://${length(var.private_zone_ids) > 0 ? aws_route53_record.private[0].fqdn : join(",", aws_network_interface.private.*.private_ip)}:${var.broker_port}"
 
     // Format: ${listener_name}:${security_protocol}[,...]
     protocol_map = "BROKER:PLAINTEXT,CLIENT:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
@@ -290,6 +293,9 @@ resource "aws_instance" "broker" {
   key_name = var.key_pair_name
 
   ebs_optimized = local.storage_ebs_flag > 0
+  credit_specification {
+    cpu_credits = "standard"
+  }
 
   user_data = data.template_file.user_data[count.index].rendered
 
@@ -426,7 +432,7 @@ resource "aws_route53_record" "private" {
 # Outputs
 #################
 output "bootstrap_servers_private" {
-  value = join(",", formatlist("%s:${var.plaintext_port}", aws_route53_record.private.*.fqdn))
+  value = join(",", formatlist("%s:${var.plaintext_port}", length(var.private_zone_ids) > 0 ? aws_route53_record.private.*.fqdn : aws_network_interface.private.*.private_ip))
 }
 output "broker_ids" {
   value = data.null_data_source.broker-ids.*.outputs.id

@@ -76,7 +76,7 @@
   replace:
     path: "{{ kafka_install_path }}/bin/kafka-server-start.sh"
     regexp: '(    HEAP_SIZE=.*\n)?(    )export KAFKA_HEAP_OPTS="[^"]+"'
-    replace: \g<2>HEAP_SIZE=$(/usr/bin/free -m | awk '/^Mem/{print int($2 * 0.2)}')m\n\g<2>export KAFKA_HEAP_OPTS="-Xms${HEAP_SIZE} -Xmx${HEAP_SIZE}"
+    replace: \g<2>HEAP_SIZE=$(/usr/bin/free -m | awk '/^Mem/{h=int($2 * 0.2); if (h < 256) print 256; else print h }')m\n\g<2>export KAFKA_HEAP_OPTS="-Xms${HEAP_SIZE} -Xmx${HEAP_SIZE}"
 
 - name: Setup log rotate
   template:

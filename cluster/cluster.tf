@@ -18,10 +18,12 @@ variable "public_subnet_ids" {
 
 variable "private_zone_ids" {
   type = list(string)
+  default = []
 }
 
 variable "public_zone_id" {
   type = string
+  default = ""
 }
 
 variable "allowed_cidrs" {
@@ -119,6 +121,7 @@ module "manager" {
   key_pair_name = var.key_pair_name
   allowed_cidrs = var.allowed_cidrs
   instance_type = var.manager_instance_type
+  kafka_cluster_size = var.kafka_cluster_size
   kafka_bootstrap_servers = module.kafka.bootstrap_servers_private
   kafka_zookeeper_connect = module.kafka.zookeeper_kafka_connect
   zookeeper_connect = module.zookeeper.zookeeper_connect

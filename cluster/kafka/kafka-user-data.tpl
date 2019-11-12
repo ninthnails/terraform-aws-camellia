@@ -19,6 +19,11 @@ ADVERTISED_LISTENERS="${broker_advertised_listener},${client_advertised_listener
 -e "s|^advertised\.listeners=.*|advertised.listeners=$${ADVERTISED_LISTENERS}|gm" \
 -e "s|^listener\.security\.protocol\.map=.*|listener.security.protocol.map=${protocol_map}|gm" \
 -e "s|^cruise\.control\.metrics\.reporter\.bootstrap\.servers=.*|cruise.control.metrics.reporter.bootstrap.servers=${bootstrap_servers}|gm" \
+-e "s|^default\.replication\.factor=.*|default.replication.factor=${default_replication_factor}|gm" \
+-e "s|^offsets\.topic\.replication\.factor=.*|offsets.topic.replication.factor=${default_replication_factor}|gm" \
+-e "s|^transaction\.state\.log\.replication\.factor=.*|transaction.state.log.replication.factor=${default_replication_factor}|gm" \
+-e "s|^min\.insync\.replicas=.*|min.insync.replicas=${min_insync_replicas}|gm" \
+-e "s|^transaction\.state\.log\.min\.isr=.*|transaction.state.log.min.isr=${min_insync_replicas}|gm" \
 /opt/kafka/config/server.properties
 
 /usr/bin/systemctl enable kafka-storage.service
