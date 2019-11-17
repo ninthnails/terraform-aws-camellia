@@ -296,9 +296,14 @@ resource "aws_codebuild_project" "packer" {
     type = "NO_ARTIFACTS"
   }
 
+  cache {
+    type = "S3"
+    location = "${local.bucket_name}/codebuild/cache"
+  }
+
   environment {
     compute_type = "BUILD_GENERAL1_SMALL"
-    image = "aws/codebuild/standard:1.0"
+    image = "aws/codebuild/amazonlinux2-x86_64-standard:1.0"
     type = "LINUX_CONTAINER"
   }
 
@@ -308,9 +313,15 @@ resource "aws_codebuild_project" "packer" {
 version: 0.2
 phases:
   install:
+    runtime-versions:
+       java: corretto11
     commands:
       - curl -sL -o packer.zip https://releases.hashicorp.com/packer/1.4.5/packer_1.4.5_linux_amd64.zip && unzip packer.zip
       - pip3 -q install 'ansible~=2.7,<2.8'
+      - curl -sL https://bintray.com/sbt/rpm/rpm > /etc/yum.repos.d/bintray-sbt-rpm.repo
+      - yum install -y sbt
+      - mkdir project && echo "sbt.version=1.2.8" > project/build.properties
+      - sbt --version
   pre_build:
     commands:
       - ./packer validate
@@ -337,6 +348,10 @@ phases:
         -var source_version=$${CODEBUILD_SOURCE_VERSION-LATEST}
         -var build_id=$${CODEBUILD_BUILD_ID-UNKNOWN}
         ${var.packer_template}
+cache:
+  paths:
+  - '/root/.ivy2/cache/**/*'
+  - '/root/.sbt/**/*'
 EOF
     type = "S3"
     location = "${local.bucket_name}/codebuild/${var.prefix}-kafka-packer-sources.zip"
