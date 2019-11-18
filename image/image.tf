@@ -350,8 +350,9 @@ phases:
         ${var.packer_template}
 cache:
   paths:
-  - '/root/.ivy2/cache/**/*'
-  - '/root/.sbt/**/*'
+    - '/root/.m2/repository/**/*'
+    - '/root/.ivy2/cache/**/*'
+    - '/root/.sbt/**/*'
 EOF
     type = "S3"
     location = "${local.bucket_name}/codebuild/${var.prefix}-kafka-packer-sources.zip"
