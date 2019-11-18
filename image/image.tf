@@ -353,6 +353,7 @@ cache:
     - '/root/.m2/repository/**/*'
     - '/root/.ivy2/cache/**/*'
     - '/root/.sbt/**/*'
+    - '/root/.gradle/**/*'
 EOF
     type = "S3"
     location = "${local.bucket_name}/codebuild/${var.prefix}-kafka-packer-sources.zip"
