@@ -173,9 +173,12 @@ resource "aws_iam_role_policy" "codebuild" {
       "Resource": "*"
     },
     {
-      "Sid": "PackerIAMPassRole",
+      "Sid": "PackerIAM",
       "Effect": "Allow",
-      "Action": "iam:PassRole",
+      "Action": [
+        "iam:PassRole",
+        "iam:GetInstanceProfile"
+      ],
       "Resource": [
         "*"
       ]
