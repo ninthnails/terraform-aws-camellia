@@ -299,11 +299,6 @@ resource "aws_codebuild_project" "packer" {
     type = "NO_ARTIFACTS"
   }
 
-  cache {
-    type = "S3"
-    location = "${local.bucket_name}/codebuild/cache"
-  }
-
   environment {
     compute_type = "BUILD_GENERAL1_SMALL"
     image = "aws/codebuild/amazonlinux2-x86_64-standard:1.0"
@@ -317,7 +312,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-       java: corretto11
+       java: corretto8
     commands:
       - curl -sL -o packer.zip https://releases.hashicorp.com/packer/1.4.5/packer_1.4.5_linux_amd64.zip && unzip packer.zip
       - pip3 -q install 'ansible~=2.7,<2.8'
