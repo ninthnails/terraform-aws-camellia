@@ -45,6 +45,11 @@ variable "tags" {
 }
 
 locals {
+  instance_type_support_recovery = contains(
+    ["a1", "c3", "c4", "c5", "c5n", "m3", "m4", "m5", "m5a", "m5n", "p3", "r3", "r4", "r5", "r5a", "r5n", "t2", "t3", "t3a", "x1", "x1e"],
+    split(".", var.instance_type)[0]
+  )
+
   zk_node_ids = range(1, var.cluster_size + 1)
   zk_server_format = "server.%[1]s=%[2]s:${var.follower_port}:${var.election_port}"
   zk_servers = formatlist(local.zk_server_format, local.zk_node_ids, aws_network_interface.zookeeper.*.private_ip)
@@ -56,6 +61,9 @@ locals {
 #################
 # Data
 #################
+data "aws_region" "this" {
+}
+
 data "aws_vpc" "this" {
   id = var.vpc_id
 }
@@ -153,7 +161,7 @@ resource "aws_network_interface" "zookeeper" {
 }
 
 #################
-# Launch Template, Auto Scaling Group
+# EC2 Instances
 #################
 data "template_file" "user_data" {
   count = var.cluster_size
@@ -165,59 +173,76 @@ data "template_file" "user_data" {
   }
 }
 
-resource "aws_launch_template" "node" {
+resource "aws_instance" "node" {
   count = var.cluster_size
-  depends_on = [
-    "aws_network_interface.zookeeper"
-  ]
-  name_prefix = "${var.prefix}-kafka-zookeeper-${count.index}-"
-  image_id = var.ami_id
+  ami = var.ami_id
   instance_type = var.instance_type
-  key_name = var.key_pair_name
-  credit_specification {
-    cpu_credits = "standard"
-  }
-  network_interfaces {
-    associate_public_ip_address = false
+  network_interface {
     delete_on_termination = false
     device_index = 0
     network_interface_id = aws_network_interface.zookeeper[count.index].id
   }
-  user_data = base64encode(data.template_file.user_data[count.index].rendered)
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}"))
-  tag_specifications {
-    resource_type = "instance"
-    tags = {
-      Name = "${var.prefix}-kafka-zookeeper-${count.index + 1}"
-      Terraform = "true"
-    }
+  key_name = var.key_pair_name
+
+  ebs_optimized = false
+  credit_specification {
+    cpu_credits = "standard"
   }
+
+  user_data = data.template_file.user_data[count.index].rendered
+
+  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}"))
+}
+
+#################
+# Alarms
+#################
+resource "aws_cloudwatch_metric_alarm" "reboot" {
+  count = local.instance_type_support_recovery ? length(aws_instance.node) : 0
+  alarm_actions = [
+    "arn:aws:automate:${data.aws_region.this.name}:ec2:reboot"
+  ]
+  alarm_description = "Reboot Linux instance when Instance status check failed for 5 minutes"
+  alarm_name = "${var.prefix}-kafka-zookeeper-${count.index + 1}-reboot"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  datapoints_to_alarm = 5
+  evaluation_periods = 5
+  threshold = 1
+  metric_name = "StatusCheckFailed_Instance"
+  namespace = "AWS/EC2"
+  period = 60
+  statistic = "Maximum"
+  dimensions = {
+    InstanceId = aws_instance.node[count.index].id
+  }
+  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}-reboot"))
   lifecycle {
-    ignore_changes = [
-      "image_id",
-      "instance_type",
-      "network_interfaces[0]",
-      "key_name",
-      "user_data"
-    ]
+    create_before_destroy = true
   }
 }
 
-resource "aws_autoscaling_group" "node" {
-  count = var.cluster_size
-  desired_capacity = 1
-  health_check_grace_period = 60
-  health_check_type = "EC2"
-  launch_template {
-    id = aws_launch_template.node[count.index].id
-    version = aws_launch_template.node[count.index].latest_version
-  }
-  name_prefix = "${var.prefix}-kafka-zookeeper-${count.index + 1}-"
-  max_size = 1
-  min_size = 1
-  availability_zones = [
-    data.aws_subnet.selected[count.index % length(data.aws_subnet.selected)].availability_zone
+resource "aws_cloudwatch_metric_alarm" "recovery" {
+  count = local.instance_type_support_recovery ? length(aws_instance.node) : 0
+  alarm_actions = [
+    "arn:aws:automate:${data.aws_region.this.name}:ec2:recover"
   ]
+  alarm_description = "Recover Linux instance when System status check failed for 10 minutes"
+  alarm_name = "${var.prefix}-kafka-zookeeper-${count.index + 1}-recovery"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  datapoints_to_alarm = 10
+  evaluation_periods = 10
+  threshold = 1
+  metric_name = "StatusCheckFailed_System"
+  namespace = "AWS/EC2"
+  period = 60
+  statistic = "Maximum"
+  dimensions = {
+    InstanceId = aws_instance.node[count.index].id
+  }
+  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}-recovery"))
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 #################
