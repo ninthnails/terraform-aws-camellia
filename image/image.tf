@@ -22,7 +22,7 @@ variable "packer_instance_type" {
 }
 
 variable "tags" {
-  type = "map"
+  type = map(string)
   default = {}
 }
 

@@ -40,7 +40,7 @@ variable "client_port" {
 }
 
 variable "tags" {
-  type = "map"
+  type = map(string)
   default = {}
 }
 

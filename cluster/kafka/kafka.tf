@@ -5,11 +5,11 @@ variable "vpc_id" {
 }
 
 variable "private_subnet_ids" {
-  type = "list"
+  type = list(string)
 }
 
 variable "public_subnet_ids" {
-  type = "list"
+  type = list(string)
 }
 
 variable "ami_id" {
@@ -67,7 +67,7 @@ variable "private_zone_ids" {
 }
 
 variable "tags" {
-  type = "map"
+  type = map(string)
   default = {}
 }
 
@@ -262,7 +262,7 @@ data "template_file" "user_data" {
     default_replication_factor = var.cluster_size < 3 ? var.cluster_size : 3
     min_insync_replicas = var.cluster_size < 2 ? 1 : 2
     zookeeper = local.zookeeper_connect
-    bootstrap_servers = "PLAINTEXT://${length(var.private_zone_ids) > 0 ? aws_route53_record.private[0].fqdn : join(",", aws_network_interface.private.*.private_ip)}:${var.broker_port}"
+    bootstrap_servers = "PLAINTEXT://${length(var.private_zone_ids) > 0 ? aws_route53_record.private[0].fqdn : join(",", formatlist("%s:%s", aws_network_interface.private.*.private_ip, var.broker_port))}"
 
     // Format: ${listener_name}:${security_protocol}[,...]
     protocol_map = "BROKER:PLAINTEXT,CLIENT:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"

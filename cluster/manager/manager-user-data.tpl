@@ -10,7 +10,7 @@
 
 /bin/echo '${capacity}' > /opt/cruise-control/config/capacity.json
 
-/bin/echo 'lab,${cluster_name},${api_endpoint}' > /opt/cruise-control/cruise-control-ui/static/config.csv
+/bin/echo 'lab,${cluster_name},${api_endpoint}' > /opt/cruise-control/cruise-control-ui/dist/static/config.csv
 
 %{ if cruise_control_enabled }
 /usr/bin/systemctl enable cruisecontrol.service

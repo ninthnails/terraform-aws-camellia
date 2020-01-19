@@ -66,7 +66,7 @@
 
 - name: Download UI archive
   unarchive:
-    src: "{{ cruise_control_ui_dist_url }}/v{{ cruise_control_ui_version }}/cruise-control-ui.tar.gz"
+    src: "{{ cruise_control_ui_dist_url }}/v{{ cruise_control_ui_version }}/cruise-control-ui-{{ cruise_control_ui_version }}.tar.gz"
     dest: "{{ cruise_control_install_path }}/"
     remote_src: yes
     owner: "{{ cruise_control_user }}"

@@ -76,7 +76,7 @@ variable "kafka_cluster_size" {
 }
 
 variable "tags" {
-  type = "map"
+  type = map(string)
   default = {}
 }
 
@@ -121,6 +121,7 @@ module "manager" {
   key_pair_name = var.key_pair_name
   allowed_cidrs = var.allowed_cidrs
   instance_type = var.manager_instance_type
+  lb_enabled = false
   kafka_cluster_size = var.kafka_cluster_size
   kafka_bootstrap_servers = module.kafka.bootstrap_servers_private
   kafka_zookeeper_connect = module.kafka.zookeeper_kafka_connect
