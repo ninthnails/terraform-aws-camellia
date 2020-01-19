@@ -175,7 +175,7 @@ resource "aws_security_group_rule" "private-ingress-tls" {
 #################
 resource "aws_network_interface" "private" {
   depends_on = [
-    "aws_security_group.private"
+    aws_security_group.private
   ]
   count = var.cluster_size
   subnet_id = element(data.aws_subnet.private.*.id, count.index % length(data.aws_subnet.private.*.id))
@@ -199,11 +199,11 @@ resource "aws_ebs_volume" "storage1" {
   tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d1"))
   lifecycle {
     ignore_changes = [
-      "encrypted",
-      "iops",
-      "kms_key_id",
-      "snapshot_id",
-      "type"
+      encrypted,
+      iops,
+      kms_key_id,
+      snapshot_id,
+      type
     ]
   }
 }
@@ -218,11 +218,11 @@ resource "aws_ebs_volume" "storage2" {
   tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d2"))
   lifecycle {
     ignore_changes = [
-      "encrypted",
-      "iops",
-      "kms_key_id",
-      "snapshot_id",
-      "type"
+      encrypted,
+      iops,
+      kms_key_id,
+      snapshot_id,
+      type
     ]
   }
 }
@@ -237,11 +237,11 @@ resource "aws_ebs_volume" "storage3" {
   tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d3"))
   lifecycle {
     ignore_changes = [
-      "encrypted",
-      "iops",
-      "kms_key_id",
-      "snapshot_id",
-      "type"
+      encrypted,
+      iops,
+      kms_key_id,
+      snapshot_id,
+      type
     ]
   }
 }
@@ -278,10 +278,10 @@ data "template_file" "user_data" {
 
 resource "aws_instance" "broker" {
   depends_on = [
-    "aws_network_interface.private",
-    "aws_ebs_volume.storage1",
-    "aws_ebs_volume.storage2",
-    "aws_ebs_volume.storage3",
+    aws_network_interface.private,
+    aws_ebs_volume.storage1,
+    aws_ebs_volume.storage2,
+    aws_ebs_volume.storage3,
   ]
   count = var.cluster_size
   ami = var.ami_id
@@ -302,7 +302,7 @@ resource "aws_instance" "broker" {
   tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}", "broker.id", local.broker_ids[count.index]))
 
   lifecycle {
-//    ignore_changes = ["*"]
+    ignore_changes = all
   }
 }
 
@@ -362,8 +362,8 @@ resource "aws_cloudwatch_metric_alarm" "recovery" {
 #################
 resource "aws_volume_attachment" "storage1" {
   depends_on = [
-    "aws_ebs_volume.storage1",
-    "aws_instance.broker"
+    aws_ebs_volume.storage1,
+    aws_instance.broker
   ]
   count = var.cluster_size * local.storage_ebs_flag
   device_name = "/dev/sdf"
@@ -374,8 +374,8 @@ resource "aws_volume_attachment" "storage1" {
 
 resource "aws_volume_attachment" "storage2" {
   depends_on = [
-    "aws_ebs_volume.storage2",
-    "aws_instance.broker"
+    aws_ebs_volume.storage2,
+    aws_instance.broker
   ]
   count = var.cluster_size * local.storage_ebs_flag
   device_name = "/dev/sdg"
@@ -386,8 +386,8 @@ resource "aws_volume_attachment" "storage2" {
 
 resource "aws_volume_attachment" "storage3" {
   depends_on = [
-    "aws_ebs_volume.storage3",
-    "aws_instance.broker"
+    aws_ebs_volume.storage3,
+    aws_instance.broker
   ]
   count = var.cluster_size * local.storage_ebs_flag
   device_name = "/dev/sdh"
@@ -401,8 +401,8 @@ resource "aws_volume_attachment" "storage3" {
 #################
 resource "aws_network_interface_attachment" "broker" {
   depends_on = [
-    "aws_network_interface.private",
-    "aws_instance.broker"
+    aws_network_interface.private,
+    aws_instance.broker
   ]
   count = var.cluster_size
   instance_id = aws_instance.broker[count.index].id

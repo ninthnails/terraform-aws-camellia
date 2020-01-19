@@ -7,7 +7,7 @@
     /usr/bin/hostnamectl ;
     /usr/bin/hostname ;
 
-# TODO Found a better way to handle polluted EC2 metadata hostname
+# TODO Find a better way to handle polluted EC2 metadata hostname
 - name: Patch cloud-init set-hostname module
   copy:
     src: cloudinit/cc_set_hostname.py

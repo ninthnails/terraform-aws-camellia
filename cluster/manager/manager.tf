@@ -31,7 +31,7 @@ variable "instance_type" {
 }
 
 variable "lb_enabled" {
-  default = false
+  default = true
 }
 
 variable "allowed_cidrs" {
@@ -241,7 +241,7 @@ data "template_file" "user_data" {
     zookeeper_connect = var.zookeeper_connect
     capacity = "{ \"brokerCapacities\":[ ${local.capacity_default},${join(",", local.capacity_brokers)} ] }"
     cluster_name = "${var.prefix}-kafka"
-    api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "http://${aws_eip.public[0].public_ip}:${var.cruise_control_port}")
+    api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
     cruise_control_enabled = var.kafka_cluster_size > 1
     topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
   }
@@ -270,39 +270,8 @@ resource "aws_instance" "server" {
 }
 
 #################
-# Load Balancer and Public Access
+# Load Balancer
 #################
-data "aws_subnet" "same-zone" {
-  availability_zone_id = data.aws_subnet.private[0].availability_zone_id
-  filter {
-    name = "subnet-id"
-    values = var.public_subnet_ids
-  }
-}
-
-resource "aws_network_interface" "public" {
-  count = var.lb_enabled ? 0 : 1
-  subnet_id = data.aws_subnet.same-zone.id
-  private_ips_count = 0
-  security_groups = [
-    aws_security_group.public[0].id
-  ]
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-manager"))
-}
-
-resource "aws_network_interface_attachment" "server-public" {
-  count = var.lb_enabled ? 0 : 1
-  device_index = 1
-  instance_id = aws_instance.server.id
-  network_interface_id = aws_network_interface.public[0].id
-}
-
-resource "aws_eip" "public" {
-  count = var.lb_enabled ? 0 : 1
-  network_interface = aws_network_interface.public[0].id
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-manager"))
-}
-
 resource "aws_lb" "alb" {
   count = var.lb_enabled ? 1 : 0
   internal = false
@@ -371,8 +340,9 @@ resource "aws_lb_listener_rule" "manager" {
     order = 20
   }
   condition {
-    field  = "path-pattern"
-    values = ["/kafkamanager/*"]
+    path_pattern {
+      values = ["/kafkamanager/*"]
+    }
   }
 }
 
@@ -385,8 +355,9 @@ resource "aws_lb_listener_rule" "cruise-static" {
     order = 30
   }
   condition {
-    field  = "path-pattern"
-    values = ["/static/*"]
+    path_pattern {
+      values = ["/static/*"]
+    }
   }
 }
 
@@ -399,8 +370,9 @@ resource "aws_lb_listener_rule" "cruise-ui" {
     order = 40
   }
   condition {
-    field  = "path-pattern"
-    values = ["/"]
+    path_pattern {
+      values = ["/"]
+    }
   }
 }
 
@@ -412,8 +384,9 @@ resource "aws_lb_listener_rule" "cruise-api" {
     target_group_arn = aws_lb_target_group.cruise[0].arn
   }
   condition {
-    field  = "path-pattern"
-    values = ["/kafkacruisecontrol/*"]
+    path_pattern {
+      values = ["/kafkacruisecontrol/*"]
+    }
   }
 }
 
@@ -421,8 +394,8 @@ resource "aws_lb_listener_rule" "cruise-api" {
 # Outputs
 #################
 output "public_cruise_control_endpoint" {
-  value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/", aws_eip.public[0].public_ip, var.cruise_control_port)
+  value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/", aws_instance.server.private_ip, var.cruise_control_port)
 }
 output "public_kafka_manager_endpoint" {
-  value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/kafkamanager/", aws_eip.public[0].public_ip, var.kafka_manager_port)
+  value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/kafkamanager/", aws_instance.server.private_ip, var.kafka_manager_port)
 }

@@ -285,6 +285,10 @@ resource "aws_security_group" "codebuild-egress" {
 }
 
 resource "aws_codebuild_project" "packer" {
+  depends_on = [
+    aws_iam_role.service,
+    aws_iam_role_policy.codebuild
+  ]
   name = "${var.prefix}-kafka-automation-packer"
   description = "Runs Packer to build AMI"
   service_role = aws_iam_role.service.arn

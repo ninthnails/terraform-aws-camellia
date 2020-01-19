@@ -5,7 +5,7 @@ variable "vpc_id" {
 }
 
 variable "subnet_ids" {
-  type = "list"
+  type = list(string)
 }
 
 variable "prefix" {
@@ -149,7 +149,7 @@ resource "aws_security_group_rule" "client-ingress" {
 #################
 resource "aws_network_interface" "zookeeper" {
   depends_on = [
-    "aws_security_group.zookeeper"
+    aws_security_group.zookeeper
   ]
   count = var.cluster_size
   subnet_id = element(var.subnet_ids, count.index % length(var.subnet_ids))
@@ -177,6 +177,9 @@ resource "aws_instance" "node" {
   count = var.cluster_size
   ami = var.ami_id
   instance_type = var.instance_type
+  lifecycle {
+    ignore_changes = all
+  }
   network_interface {
     delete_on_termination = false
     device_index = 0
