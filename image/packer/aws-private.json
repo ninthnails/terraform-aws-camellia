@@ -15,7 +15,7 @@
   "builders": [
     {
       "type": "amazon-ebs",
-      "ami_name": "{{ user `ami_base_name` }}-kafka-{{ user `kafka_version` }}-hvm-{{ isotime \"2006-01-02\" }}-{{ user `build_id` }}-x86_64-gp2",
+      "ami_name": "{{ user `ami_base_name` }}-kafka-{{ user `kafka_version` }}-hvm-{{ isotime \"20060102\" }}.{{ user `build_id` }}-x86_64-gp2",
       "instance_type": "{{ user `instance_type` }}",
       "source_ami_filter": {
         "filters": {
@@ -41,12 +41,12 @@
       "ebs_optimized": true,
       "enable_t2_unlimited": false,
       "tags": {
-        "Name": "{{ user `ami_base_name` }}-kafka-{{ user `kafka_version` }}-hvm-{{ isotime \"2006-01-02\" }}-{{ user `build_id` }}-x86_64-gp2",
+        "Name": "{{ user `ami_base_name` }}-kafka-{{ user `kafka_version` }}-hvm-{{ isotime \"20060102\" }}.{{ user `build_id` }}-x86_64-gp2",
         "Version": "{{ user `source_version` }}",
         "Build Id": "{{ user `build_id` }}"
       },
       "run_tags": {
-        "Name": "packer-{{ user `ami_base_name` }}-kafka-{{ user `kafka_version` }}-hvm-{{ isotime \"2006-01-02\" }}-{{ user `build_id` }}-x86_64-gp2",
+        "Name": "packer-{{ user `ami_base_name` }}-kafka-{{ user `kafka_version` }}-hvm-{{ isotime \"20060102\" }}.{{ user `build_id` }}-x86_64-gp2",
         "Version": "{{ user `source_version` }}",
         "Build Id": "{{ user `build_id` }}"
       }
