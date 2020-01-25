@@ -1,6 +1,10 @@
 #################
 # Variables
 #################
+variable "admin_password" {
+  default = ""
+}
+
 variable "vpc_id" {
 }
 
@@ -91,6 +95,12 @@ variable "tags" {
 #################
 # Data and Local Variables
 #################
+data "aws_region" "this" {
+}
+
+data "aws_caller_identity" "this" {
+}
+
 data "aws_vpc" "this" {
   id = var.vpc_id
 }
@@ -106,6 +116,7 @@ data "aws_subnet" "public" {
 }
 
 locals {
+  admin_password_is_ssm_parameter = length(regexall("^parameter/.*", var.admin_password)) > 0
   capacity_template = {brokerId: "%s", capacity: {DISK: "%s", CPU: "100", NW_IN: "%s", NW_OUT: "%s"}}
   capacity_default = format(jsonencode(local.capacity_template), "-1",
     var.kafka_storage_volume_size > 4 ? var.kafka_storage_volume_size - 2 : var.kafka_storage_volume_size,
@@ -232,10 +243,58 @@ resource "aws_security_group" "public" {
 #################
 # EC2 Instance
 #################
+data "aws_iam_policy_document" "assume" {
+  statement {
+    actions = [
+      "sts:AssumeRole"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = [
+        "ec2.amazonaws.com"
+      ]
+      type = "Service"
+    }
+  }
+}
+
+resource "aws_iam_role" "server" {
+  assume_role_policy = data.aws_iam_policy_document.assume.json
+  name_prefix = "${var.prefix}-kafka-manager-server-"
+  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-manager-server"))
+}
+
+resource "aws_iam_instance_profile" "server" {
+  name_prefix = "${var.prefix}-kafka-manager-server-"
+  role = aws_iam_role.server.id
+}
+
+data "aws_iam_policy_document" "ssm" {
+  count = local.admin_password_is_ssm_parameter ? 1 : 0
+  statement {
+    actions = [
+      "ssm:GetParameter"
+    ]
+    effect = "Allow"
+    resources = [
+      "arn:aws:ssm:${data.aws_region.this.name}:${data.aws_caller_identity.this.account_id}:${var.admin_password}"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "ssm" {
+  count = local.admin_password_is_ssm_parameter ? 1 : 0
+  name_prefix = "ssm-"
+  policy = data.aws_iam_policy_document.ssm[0].json
+  role = aws_iam_role.server.id
+}
+
 data "template_file" "user_data" {
   template = file("${path.module}/manager-user-data.tpl")
 
   vars = {
+    admin_password = var.admin_password
+    admin_password_is_ssm_parameter = local.admin_password_is_ssm_parameter
     kafka_bootstrap_servers = var.kafka_bootstrap_servers
     kafka_zookeeper_connect = var.kafka_zookeeper_connect
     zookeeper_connect = var.zookeeper_connect
@@ -243,12 +302,14 @@ data "template_file" "user_data" {
     cluster_name = "${var.prefix}-kafka"
     api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
     cruise_control_enabled = var.kafka_cluster_size > 1
+    region = data.aws_region.this.name
     topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
   }
 }
 
 resource "aws_instance" "server" {
   ami = var.ami_id
+  iam_instance_profile = aws_iam_instance_profile.server.id
   instance_type = var.instance_type
   subnet_id = data.aws_subnet.private[0].id
   vpc_security_group_ids = [
