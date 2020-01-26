@@ -67,6 +67,10 @@ variable "kafka_storage_volume_size" {
   default = 1
 }
 
+variable "manager_admin_password" {
+  default = ""
+}
+
 variable "manager_instance_type" {
   default = "t3a.nano"
 }
@@ -114,6 +118,7 @@ module "kafka" {
 
 module "manager" {
   source = "./manager"
+  admin_password = var.manager_admin_password
   prefix = var.prefix
   vpc_id = var.vpc_id
   private_subnet_ids = var.private_subnet_ids
