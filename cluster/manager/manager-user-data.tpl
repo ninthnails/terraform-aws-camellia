@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export AWS_REGION='${region}
+export AWS_REGION='${region}'
 export CLUSTER_ENVIRONMENT='${cluster_environment}'
 export CLUSTER_NAME='${cluster_name}'
 export CRUISE_CONTROL_API_ENDPOINT='${api_endpoint}'
