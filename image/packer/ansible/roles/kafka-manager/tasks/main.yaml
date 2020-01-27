@@ -48,11 +48,18 @@
     dest: "{{ kafka_manager_install_path }}/conf/{{ item }}"
     owner: "{{ kafka_manager_user }}"
     group: "{{ kafka_manager_user }}"
-    mode: 0644
+    mode: 0600
   loop:
     - application.conf
     - environment
     - logback.xml
+
+- name: Install setup script
+  template:
+    src: usr/local/sbin/setup.sh
+    dest: /usr/local/sbin/setup.sh
+    owner: root
+    mode: 0600
 
 - name: Install service units
   template:

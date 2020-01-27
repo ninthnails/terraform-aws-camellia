@@ -1,6 +1,14 @@
 #################
 # Variables
 #################
+variable "environment" {
+  default = "lab"
+}
+
+variable "admin_username" {
+  default = "admin"
+}
+
 variable "admin_password" {
   default = ""
 }
@@ -293,12 +301,14 @@ data "template_file" "user_data" {
   template = file("${path.module}/manager-user-data.tpl")
 
   vars = {
+    admin_enabled = length(var.admin_username) > 0 && length(var.admin_password) > 0
+    admin_username = var.admin_username
     admin_password = var.admin_password
-    admin_password_is_ssm_parameter = local.admin_password_is_ssm_parameter
     kafka_bootstrap_servers = var.kafka_bootstrap_servers
     kafka_zookeeper_connect = var.kafka_zookeeper_connect
     zookeeper_connect = var.zookeeper_connect
     capacity = "{ \"brokerCapacities\":[ ${local.capacity_default},${join(",", local.capacity_brokers)} ] }"
+    cluster_environment = var.environment
     cluster_name = "${var.prefix}-kafka"
     api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
     cruise_control_enabled = var.kafka_cluster_size > 1
