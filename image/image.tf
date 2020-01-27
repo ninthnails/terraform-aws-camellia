@@ -336,6 +336,7 @@ phases:
         -var instance_type=${var.packer_instance_type}
         -var source_version=$${CODEBUILD_SOURCE_VERSION-LATEST}
         -var build_id=$${CODEBUILD_BUILD_ID-UNKNOWN}
+        -var build_number=$${CODEBUILD_BUILD_NUMBER-UNKNOWN}
         ${var.packer_template}
   build:
     commands:
@@ -349,6 +350,7 @@ phases:
         -var instance_type=${var.packer_instance_type}
         -var source_version=$${CODEBUILD_SOURCE_VERSION-LATEST}
         -var build_id=$${CODEBUILD_BUILD_ID-UNKNOWN}
+        -var build_number=$${CODEBUILD_BUILD_NUMBER-UNKNOWN}
         ${var.packer_template}
 cache:
   paths:
