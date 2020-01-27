@@ -15,6 +15,14 @@ variable "allowed_cidrs" {
   type = map(list(string))
 }
 
+variable "kafka_cluster_size" {
+  default = 1
+}
+
+variable "zookeeper_cluster_size" {
+  default = 1
+}
+
 variable "manager_admin_password" {
   default = ""
 }
@@ -101,8 +109,8 @@ module "cluster" {
   camellia_ami_id = data.aws_ami.camellia.id
   kafka_storage_type = "root"
   kafka_storage_volume_type = "standard"
-  kafka_cluster_size = 3
-  zookeeper_cluster_size = 3
+  kafka_cluster_size = var.kafka_cluster_size
+  zookeeper_cluster_size = var.zookeeper_cluster_size
 }
 
 #################
