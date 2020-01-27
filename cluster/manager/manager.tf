@@ -124,7 +124,8 @@ data "aws_subnet" "public" {
 }
 
 locals {
-  admin_password_is_ssm_parameter = length(regexall("^parameter/.*", var.admin_password)) > 0
+  is_admin_password_systems_manager_parameter = length(regexall("^parameter/.*", var.admin_password)) > 0
+  is_admin_password_secrets_manager_secret = length(regexall("^secrets/.*", var.admin_password)) > 0
   capacity_template = {brokerId: "%s", capacity: {DISK: "%s", CPU: "100", NW_IN: "%s", NW_OUT: "%s"}}
   capacity_default = format(jsonencode(local.capacity_template), "-1",
     var.kafka_storage_volume_size > 4 ? var.kafka_storage_volume_size - 2 : var.kafka_storage_volume_size,
@@ -277,8 +278,8 @@ resource "aws_iam_instance_profile" "server" {
   role = aws_iam_role.server.id
 }
 
-data "aws_iam_policy_document" "ssm" {
-  count = local.admin_password_is_ssm_parameter ? 1 : 0
+data "aws_iam_policy_document" "system-manager" {
+  count = local.is_admin_password_systems_manager_parameter ? 1 : 0
   statement {
     actions = [
       "ssm:GetParameter"
@@ -290,10 +291,30 @@ data "aws_iam_policy_document" "ssm" {
   }
 }
 
+data "aws_iam_policy_document" "secrets-manager" {
+  count = local.is_admin_password_secrets_manager_secret ? 1 : 0
+  statement {
+    actions = [
+      "secretsmanager:GetSecretValue"
+    ]
+    effect = "Allow"
+    resources = [
+      "arn:aws:secretsmanager:${data.aws_region.this.name}:${data.aws_caller_identity.this.account_id}:${var.admin_password}"
+    ]
+  }
+}
+
 resource "aws_iam_role_policy" "ssm" {
-  count = local.admin_password_is_ssm_parameter ? 1 : 0
-  name_prefix = "ssm-"
-  policy = data.aws_iam_policy_document.ssm[0].json
+  count = local.is_admin_password_systems_manager_parameter ? 1 : 0
+  name_prefix = "system-manager-"
+  policy = data.aws_iam_policy_document.system-manager[0].json
+  role = aws_iam_role.server.id
+}
+
+resource "aws_iam_role_policy" "secrets-manager" {
+  count = local.is_admin_password_secrets_manager_secret ? 1 : 0
+  name_prefix = "secrets-manager-"
+  policy = data.aws_iam_policy_document.secrets-manager[0].json
   role = aws_iam_role.server.id
 }
 
