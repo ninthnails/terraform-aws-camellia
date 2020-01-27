@@ -1,7 +1,7 @@
 kafka_manager_version: 2.0.0.2
-kafka_manager_dist_url: https://github.com/yahoo/kafka-manager/archive
+kafka_manager_dist_url: https://github.com/yahoo/CMAK/archive
 kafka_manager_build_path: /tmp
-kafka_manager_archive_path: "{{ kafka_manager_build_path }}/kafka-manager-{{ kafka_manager_version }}/target/universal/kafka-manager-{{ kafka_manager_version }}.zip"
+kafka_manager_archive_path: "{{ kafka_manager_build_path }}/CMAK-{{ kafka_manager_version }}/target/universal/kafka-manager-{{ kafka_manager_version }}.zip"
 kafka_manager_install_path: /opt/kafka-manager
 kafka_manager_logging_path: /var/log/kafka-manager
 kafka_manager_user: kmanager

@@ -9,5 +9,5 @@
 - name: Build main distribution
   command: sbt -Dsbt.log.noformat=false dist
   args:
-    chdir: "{{ kafka_manager_build_path }}/kafka-manager-{{ kafka_manager_version }}"
+    chdir: "{{ kafka_manager_build_path }}/CMAK-{{ kafka_manager_version }}"
   delegate_to: 127.0.0.1
