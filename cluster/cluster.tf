@@ -21,6 +21,26 @@ variable "private_zone_ids" {
   default = []
 }
 
+variable "manager_lb_certificate_source" {
+  default = ""
+}
+
+variable "manager_lb_certificate" {
+  default = ""
+}
+
+variable "manager_lb_certificate_key" {
+  default = ""
+}
+
+variable "manager_lb_domain_name" {
+  default = ""
+}
+
+variable "manager_lb_enabled" {
+  default = false
+}
+
 variable "public_zone_id" {
   type = string
   default = ""
@@ -126,7 +146,11 @@ module "manager" {
   key_pair_name = var.key_pair_name
   allowed_cidrs = var.allowed_cidrs
   instance_type = var.manager_instance_type
-  lb_enabled = false
+  lb_certificate = var.manager_lb_certificate
+  lb_certificate_key = var.manager_lb_certificate_key
+  lb_certificate_source = var.manager_lb_certificate_source
+  lb_enabled = var.manager_lb_enabled
+  lb_domain_name = var.manager_lb_domain_name
   kafka_cluster_size = var.kafka_cluster_size
   kafka_bootstrap_servers = module.kafka.bootstrap_servers_private
   kafka_zookeeper_connect = module.kafka.zookeeper_kafka_connect
@@ -155,4 +179,12 @@ output "manager_cruise_control_endpoint" {
 
 output "manager_kafka_manager_endpoint" {
   value = module.manager.public_kafka_manager_endpoint
+}
+
+output "manager_kafka_manager_internal_http" {
+  value = module.manager.kafka_manager_internal_http
+}
+
+output "manager_kafka_manager_internal_https" {
+  value = module.manager.kafka_manager_internal_https
 }

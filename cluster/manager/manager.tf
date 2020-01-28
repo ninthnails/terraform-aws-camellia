@@ -43,7 +43,7 @@ variable "instance_type" {
 }
 
 variable "lb_enabled" {
-  default = true
+  default = false
 }
 
 variable "allowed_cidrs" {
@@ -58,12 +58,36 @@ variable "allowed_cidrs" {
   }
 }
 
+variable "lb_certificate_source" {
+  default = ""
+}
+
+variable "lb_certificate" {
+  default = ""
+}
+
+variable "lb_certificate_arn" {
+  default = ""
+}
+
+variable "lb_certificate_key" {
+  default = ""
+}
+
+variable "lb_domain_name" {
+  default = ""
+}
+
 variable "public_zone_id" {
   default = ""
 }
 
 variable "cruise_control_port" {
   default = 9090
+}
+
+variable "kafka_manager_https_port" {
+  default = 9443
 }
 
 variable "kafka_manager_port" {
@@ -126,6 +150,15 @@ data "aws_subnet" "public" {
 locals {
   is_admin_password_systems_manager_parameter = length(regexall("^parameter/.*", var.admin_password)) > 0
   is_admin_password_secrets_manager_secret = length(regexall("^secrets/.*", var.admin_password)) > 0
+  is_lb_certificate_imported = var.lb_certificate_source == "import"
+  is_lb_certificate_acm = var.lb_certificate_source == "acm"
+//  is_lb_certificate_acm = length(regexall("^arn:aws:acm:.*", var.lb_certificate)) > 0
+  is_lb_https_enabled = local.is_lb_certificate_imported || local.is_lb_certificate_acm
+
+//  is_lb_cert_key_acm_certificate = length(regexall("^arn:aws:acm:.*", var.lb_certificate_key)) > 0
+//  is_lb_cert_key_ssm_parameter = length(regexall("^parameter/.*", var.lb_certificate_key)) > 0
+//  is_lb_cert_key_sm_secret = length(regexall("^secrets/.*", var.lb_certificate_key)) > 0
+
   capacity_template = {brokerId: "%s", capacity: {DISK: "%s", CPU: "100", NW_IN: "%s", NW_OUT: "%s"}}
   capacity_default = format(jsonencode(local.capacity_template), "-1",
     var.kafka_storage_volume_size > 4 ? var.kafka_storage_volume_size - 2 : var.kafka_storage_volume_size,
@@ -189,6 +222,18 @@ resource "aws_security_group_rule" "ingress-manager" {
   ]
   from_port = var.kafka_manager_port
   to_port = var.kafka_manager_port
+  protocol = "tcp"
+}
+
+resource "aws_security_group_rule" "ingress-manager-https" {
+  description = "HTTPS Kafka Manager"
+  type = "ingress"
+  security_group_id = aws_security_group.private.id
+  cidr_blocks = [
+    data.aws_vpc.this.cidr_block
+  ]
+  from_port = var.kafka_manager_https_port
+  to_port = var.kafka_manager_https_port
   protocol = "tcp"
 }
 
@@ -331,7 +376,8 @@ data "template_file" "user_data" {
     capacity = "{ \"brokerCapacities\":[ ${local.capacity_default},${join(",", local.capacity_brokers)} ] }"
     cluster_environment = var.environment
     cluster_name = "${var.prefix}-kafka"
-    api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
+//    api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${local.is_lb_https_enabled ? "https" : "http"}/${aws_lb.alb[0].dns_name}" : "")
+    api_endpoint = "/kafkacruisecontrol/"
     cruise_control_enabled = var.kafka_cluster_size > 1
     region = data.aws_region.this.name
     topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
@@ -378,6 +424,7 @@ resource "aws_lb" "alb" {
 }
 
 resource "aws_lb_target_group" "cruise" {
+  name = "${var.prefix}-manager-cruise-http"
   count = var.lb_enabled ? 1 : 0
   port = var.cruise_control_port
   protocol = "HTTP"
@@ -385,6 +432,7 @@ resource "aws_lb_target_group" "cruise" {
   health_check {
     path = "/kafkacruisecontrol/state"
   }
+  tags = var.tags
 }
 
 resource "aws_lb_target_group_attachment" "cruise" {
@@ -395,6 +443,7 @@ resource "aws_lb_target_group_attachment" "cruise" {
 }
 
 resource "aws_lb_target_group" "manager" {
+  name = "${var.prefix}-manager-cmak-http"
   count = var.lb_enabled ? 1 : 0
   port = var.kafka_manager_port
   protocol = "HTTP"
@@ -402,6 +451,7 @@ resource "aws_lb_target_group" "manager" {
   health_check {
     path = "/kafkamanager"
   }
+  tags = var.tags
 }
 
 resource "aws_lb_target_group_attachment" "manager" {
@@ -483,11 +533,122 @@ resource "aws_lb_listener_rule" "cruise-api" {
 }
 
 #################
+# HTTPS
+#################
+resource "aws_acm_certificate" "imported" {
+  count = var.lb_enabled && local.is_lb_certificate_imported ? 1 : 0
+  certificate_body = var.lb_certificate
+  private_key = var.lb_certificate_key
+  tags = merge(var.tags, map("Name", "${var.prefix}-manager-certificate"))
+}
+
+resource "aws_lb_target_group" "manager-https" {
+  name = "${var.prefix}-manager-cmak-https"
+  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+  health_check {
+    path = "/kafkamanager"
+  }
+  port = var.kafka_manager_https_port
+  protocol = "HTTPS"
+  tags = var.tags
+  vpc_id = var.vpc_id
+}
+
+resource "aws_lb_target_group_attachment" "manager-https" {
+  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+  target_group_arn = aws_lb_target_group.manager-https[0].arn
+  target_id = aws_instance.server.id
+  port = var.kafka_manager_https_port
+}
+
+resource "aws_lb_listener" "https" {
+  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+  certificate_arn = local.is_lb_certificate_imported ? aws_acm_certificate.imported[0].arn : (local.is_lb_certificate_acm ? var.lb_certificate : "")
+  default_action {
+    type = "forward"
+    target_group_arn = aws_lb_target_group.manager-https[0].arn
+  }
+  load_balancer_arn = aws_lb.alb[0].arn
+  port = "443"
+  protocol = "HTTPS"
+  ssl_policy = "ELBSecurityPolicy-TLS-1-2-Ext-2018-06"
+}
+
+resource "aws_lb_listener_rule" "manager-https" {
+  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
+  action {
+    type = "forward"
+    target_group_arn = aws_lb_target_group.manager-https[0].arn
+    order = 20
+  }
+  condition {
+    path_pattern {
+      values = ["/kafkamanager/*"]
+    }
+  }
+}
+
+//resource "aws_lb_listener_rule" "cruise-static-https" {
+//  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+//  listener_arn = aws_lb_listener.https[0].arn
+//  action {
+//    type = "forward"
+//    target_group_arn = aws_lb_target_group.cruise[0].arn
+//    order = 30
+//  }
+//  condition {
+//    path_pattern {
+//      values = ["/static/*"]
+//    }
+//  }
+//}
+//
+//resource "aws_lb_listener_rule" "cruise-ui-https" {
+//  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+//  listener_arn = aws_lb_listener.https[0].arn
+//  action {
+//    type = "forward"
+//    target_group_arn = aws_lb_target_group.cruise[0].arn
+//    order = 40
+//  }
+//  condition {
+//    path_pattern {
+//      values = ["/"]
+//    }
+//  }
+//}
+
+#################
+# Routing
+#################
+resource "aws_route53_record" "public-alias" {
+  count = var.lb_enabled && length(var.lb_domain_name) > 0 ? 1 : 0
+  alias {
+    evaluate_target_health = false
+    name = aws_lb.alb[0].dns_name
+    zone_id = aws_lb.alb[0].zone_id
+  }
+  name = var.lb_domain_name
+  type = "A"
+  zone_id = var.public_zone_id
+}
+
+#################
 # Outputs
 #################
 output "public_cruise_control_endpoint" {
   value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/", aws_instance.server.private_ip, var.cruise_control_port)
 }
+
 output "public_kafka_manager_endpoint" {
   value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/kafkamanager/", aws_instance.server.private_ip, var.kafka_manager_port)
+}
+
+output "kafka_manager_internal_http" {
+  value = format("http://%s:%s/kafkamanager/", aws_instance.server.private_ip, var.kafka_manager_port)
+}
+
+output "kafka_manager_internal_https" {
+  value = format("https://%s:%s/kafkamanager/", aws_instance.server.private_ip, var.kafka_manager_https_port)
 }

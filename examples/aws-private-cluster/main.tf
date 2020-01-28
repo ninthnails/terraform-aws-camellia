@@ -5,6 +5,11 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
+variable "domain_name" {
+  // See https://tools.ietf.org/html/rfc2606#section-2
+  default = "local.example"
+}
+
 variable "ssh_key_name" {
 }
 
@@ -43,6 +48,10 @@ provider "template" {
   version = "~> 2.1"
 }
 
+provider "tls" {
+  version = "~> 2.1"
+}
+
 #################
 # Data
 #################
@@ -77,10 +86,10 @@ data "aws_subnet_ids" "public" {
   }
 }
 
-data "aws_route53_zone" "local" {
-  name = "local.example."
-  vpc_id = data.aws_vpc.this.id
-  private_zone = true
+data "aws_route53_zone" "zone" {
+  name = "${var.domain_name}."
+//  vpc_id = data.aws_vpc.this.id
+  private_zone = false
 }
 
 data "aws_ami" "camellia" {
@@ -93,6 +102,29 @@ data "aws_ami" "camellia" {
   most_recent = true
 }
 
+resource "tls_private_key" "example" {
+  algorithm = "RSA"
+}
+
+resource "tls_self_signed_cert" "example" {
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+  dns_names = [
+    "camellia.${data.aws_route53_zone.zone.name}",
+    "*.camellia.${data.aws_route53_zone.zone.name}"
+  ]
+  key_algorithm   = "RSA"
+  private_key_pem = tls_private_key.example.private_key_pem
+  subject {
+    common_name  = "camellia.${data.aws_route53_zone.zone.name}"
+    organization = "camellia-terraform Examples, Inc"
+  }
+  validity_period_hours = 24 * 30
+}
+
 
 #################
 # Modules
@@ -100,6 +132,22 @@ data "aws_ami" "camellia" {
 module "cluster" {
   source = "../../cluster"
   manager_admin_password = var.manager_admin_password
+
+  // Example of no Load Balancer, internallyt accessible manager
+  manager_lb_enabled = false
+
+   // Example of self signed certificate for development purpose
+//   manager_lb_certificate = tls_self_signed_cert.example.cert_pem
+//   manager_lb_certificate_key = chomp(tls_private_key.example.private_key_pem)
+//   manager_lb_certificate_source = "import"
+//   manager_lb_enabled = true
+//   manager_lb_domain_name = "manager.camellia.${data.aws_route53_zone.local.name}"
+
+  // Example of certificate in Amazon Certificate Manager
+//   manager_lb_certificate = "arn:aws:acm:region:123456789012:certificate/12345678-1234-1234-1234-12345678901"
+//   manager_lb_certificate_source = "acm"
+//   manager_lb_enabled = true
+
   vpc_id = data.aws_vpc.this.id
   private_subnet_ids = data.aws_subnet_ids.private.ids
   public_subnet_ids = data.aws_subnet_ids.public.ids
@@ -113,21 +161,28 @@ module "cluster" {
   zookeeper_cluster_size = var.zookeeper_cluster_size
 }
 
-#################
-# Outputs
-#################
-output "zookeeper_kafka_connect" {
-  value = module.cluster.zookeeper_kafka_connect
+//#################
+//# Outputs
+//#################
+//output "zookeeper_kafka_connect" {
+//  value = module.cluster.zookeeper_kafka_connect
+//}
+//
+//output "kafka_bootstrap_servers_private" {
+//  value = module.cluster.kafka_bootstrap_servers_private
+//}
+//
+//output "manager_cruise_control_endpoint" {
+//  value = module.cluster.manager_cruise_control_endpoint
+//}
+//
+//output "manager_kafka_manager_endpoint" {
+//  value = module.cluster.manager_kafka_manager_endpoint
+//}
+output "manager_kafka_manager_internal_http" {
+  value = module.cluster.manager_kafka_manager_internal_http
 }
 
-output "kafka_bootstrap_servers_private" {
-  value = module.cluster.kafka_bootstrap_servers_private
-}
-
-output "manager_cruise_control_endpoint" {
-  value = module.cluster.manager_cruise_control_endpoint
-}
-
-output "manager_kafka_manager_endpoint" {
-  value = module.cluster.manager_kafka_manager_endpoint
+output "manager_kafka_manager_internal_https" {
+  value = module.cluster.manager_kafka_manager_internal_https
 }
