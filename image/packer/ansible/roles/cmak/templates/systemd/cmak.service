@@ -1,0 +1,17 @@
+[Unit]
+Description=Yahoo Cluster Manager for Apache Kafka
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory={{ cmak_install_path }}
+EnvironmentFile={{ cmak_install_path }}/conf/environment
+ExecStart={{ cmak_install_path }}/bin/cmak
+KillMode=process
+Restart=on-failure
+RestartSec=500ms
+User={{ cmak_user }}
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

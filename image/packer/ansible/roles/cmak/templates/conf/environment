@@ -1,0 +1,12 @@
+ZK_HOSTS=localhost:2181
+
+JAVA_OPTS="-server \
+-XX:+UseG1GC \
+-XX:MaxGCPauseMillis=200 \
+-Xms128m \
+-Xmx128m \
+-Djava.security.egd=file:/dev/urandom \
+-Dpidfile.path={{ cmak_install_path }}/kafka-manager.pid \
+-Dhttp.port={{ cmak_http_port }} \
+-Dhttps.port={{ cmak_https_port }} \
+"

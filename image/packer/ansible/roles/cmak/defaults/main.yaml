@@ -1,0 +1,8 @@
+cmak_version: 3.0.0.4
+cmak_dist_url: https://github.com/yahoo/CMAK/releases/download
+cmak_build_path: /tmp
+cmak_install_path: /opt/cmak
+cmak_logging_path: /var/log/cmak
+cmak_user: cmak
+cmak_http_port: 9000
+cmak_https_port: 9443
