@@ -348,11 +348,6 @@ phases:
         -var build_id=$${CODEBUILD_BUILD_ID-UNKNOWN}
         -var build_number=$${CODEBUILD_BUILD_NUMBER-UNKNOWN}
         ${var.packer_template}
-cache:
-  paths:
-    - '/root/.m2/repository/**/*'
-    - '/root/.ivy2/cache/**/*'
-    - '/root/.gradle/**/*'
 EOF
     type = "S3"
     location = "${local.bucket_name}/codebuild/${var.prefix}-kafka-packer-sources.zip"

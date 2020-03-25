@@ -143,7 +143,7 @@ locals {
 resource "aws_security_group" "private" {
   name_prefix = "${var.prefix}-manager-private-"
   vpc_id = var.vpc_id
-  description = "Security group for Kafka Manager"
+  description = "Security group for Cluster Manager for Apache Kafka"
   tags = merge(var.tags, map("Name", "${var.prefix}-manager-private"))
 }
 
@@ -181,7 +181,7 @@ resource "aws_security_group_rule" "ingress-cruise" {
 }
 
 resource "aws_security_group_rule" "ingress-manager" {
-  description = "HTTP Kafka Manager"
+  description = "HTTP Cluster Manager for Apache Kafka"
   type = "ingress"
   security_group_id = aws_security_group.private.id
   cidr_blocks = [
@@ -195,7 +195,7 @@ resource "aws_security_group_rule" "ingress-manager" {
 resource "aws_security_group" "lb" {
   name_prefix = "${var.prefix}-manager-lb-"
   vpc_id = var.vpc_id
-  description = "Security group for Kafka Manager"
+  description = "Security group for Cluster Manager for Apache Kafka"
   tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
   ingress {
     from_port = 80
@@ -222,10 +222,10 @@ resource "aws_security_group" "public" {
   count = var.lb_enabled ? 0 : 1
   name_prefix = "${var.prefix}-manager-public-"
   vpc_id = var.vpc_id
-  description = "Security group for Kafka Manager public access"
+  description = "Security group for Cluster Manager for Apache Kafka public access"
   tags = merge(var.tags, map("Name", "${var.prefix}-manager-public"))
   ingress {
-    description = "Kafka Manager"
+    description = "Cluster Manager for Apache Kafka"
     from_port = var.kafka_manager_port
     protocol = "TCP"
     to_port = var.kafka_manager_port
@@ -400,7 +400,7 @@ resource "aws_lb_target_group" "manager" {
   protocol = "HTTP"
   vpc_id = var.vpc_id
   health_check {
-    path = "/kafkamanager"
+    path = "/cmak"
   }
 }
 
@@ -433,7 +433,7 @@ resource "aws_lb_listener_rule" "manager" {
   }
   condition {
     path_pattern {
-      values = ["/kafkamanager/*"]
+      values = ["/cmak/*"]
     }
   }
 }
@@ -488,6 +488,6 @@ resource "aws_lb_listener_rule" "cruise-api" {
 output "public_cruise_control_endpoint" {
   value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/", aws_instance.server.private_ip, var.cruise_control_port)
 }
-output "public_kafka_manager_endpoint" {
-  value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/kafkamanager/", aws_instance.server.private_ip, var.kafka_manager_port)
+output "public_cluster_manager_endpoint" {
+  value = var.lb_enabled ? format("%s://%s/", lower(aws_lb_listener.http[0].protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/cmak/", aws_instance.server.private_ip, var.kafka_manager_port)
 }

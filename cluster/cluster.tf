@@ -153,6 +153,6 @@ output "manager_cruise_control_endpoint" {
   value = module.manager.public_cruise_control_endpoint
 }
 
-output "manager_kafka_manager_endpoint" {
-  value = module.manager.public_kafka_manager_endpoint
+output "manager_cluster_manager_endpoint" {
+  value = module.manager.public_cluster_manager_endpoint
 }
