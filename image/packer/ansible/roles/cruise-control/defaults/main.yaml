@@ -1,9 +1,8 @@
-cruise_control_version: 2.0.85
+cruise_control_version: 2.0.97
 cruise_control_build_path: /tmp
-cruise_control_dist_url: "https://github.com/linkedin/cruise-control/archive"
+cruise_control_dist_url: "https://github.com/ninthnails/linkedin-cruise-control-dist/releases/download"
 cruise_control_install_path: /opt/cruise-control
 cruise_control_logging_path: /var/log/cruise-control
-cruise_control_archive_path: "{{ cruise_control_build_path }}/cruise-control.tgz"
 cruise_control_user: cruise
 cruise_control_webserver_port: 9090
 

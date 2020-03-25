@@ -14,13 +14,11 @@
     - "{{ cruise_control_install_path }}"
     - "{{ cruise_control_logging_path }}"
 
-- name: Build Cruise Control
-  include: build.yaml
-
-- name: Transfer archive
+- name: Download archive
   unarchive:
-    src: "{{ cruise_control_archive_path }}"
+    src: "{{ cruise_control_dist_url }}/{{ cruise_control_version }}/linkedin-cruise-control-{{ cruise_control_version }}.tgz"
     dest: "{{ cruise_control_install_path }}/"
+    remote_src: yes
     extra_opts:
       - --strip-components=1
     owner: "{{ cruise_control_user }}"
@@ -47,7 +45,7 @@
 
 - name: Copy Metrics Reporter library in Kafka folder
   copy:
-    src: "{{ cruise_control_install_path }}/cruise-control-metrics-reporter/build/libs/cruise-control-metrics-reporter-0.1.0-SNAPSHOT.jar"
+    src: "{{ cruise_control_install_path }}/cruise-control-metrics-reporter/build/libs/cruise-control-metrics-reporter-{{ cruise_control_version }}.jar"
     dest: "{{ kafka_install_path }}/libs/"
     remote_src: yes
     owner: "{{ kafka_user }}"
