@@ -320,10 +320,6 @@ phases:
     commands:
       - curl -sL -o packer.zip https://releases.hashicorp.com/packer/1.4.5/packer_1.4.5_linux_amd64.zip && unzip packer.zip
       - pip3 -q install 'ansible~=2.7,<2.8'
-      - curl -sL https://bintray.com/sbt/rpm/rpm > /etc/yum.repos.d/bintray-sbt-rpm.repo
-      - yum install -y sbt
-      - mkdir project && echo "sbt.version=1.2.8" > project/build.properties
-      - sbt --version
   pre_build:
     commands:
       - ./packer validate
@@ -356,7 +352,6 @@ cache:
   paths:
     - '/root/.m2/repository/**/*'
     - '/root/.ivy2/cache/**/*'
-    - '/root/.sbt/**/*'
     - '/root/.gradle/**/*'
 EOF
     type = "S3"
