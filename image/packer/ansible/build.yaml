@@ -10,7 +10,7 @@
     - zookeeper
     - kafka
     - cruise-control
-    - kafka-manager
+    - cmak
     - monitoring
     - verify
     - finalize
