@@ -140,9 +140,9 @@
   assert:
     that: "'cruisecontrol.service' not in ansible_facts.services"
 
-- name: Is Kafka Manager service disabled?
+- name: Is Cluster Manager for Apache Kafka service disabled?
   assert:
-    that: "'kafkamanager.service' not in ansible_facts.services"
+    that: "'cmak.service' not in ansible_facts.services"
 
 - name: Is amazon-ssm-agent running?
   assert:
