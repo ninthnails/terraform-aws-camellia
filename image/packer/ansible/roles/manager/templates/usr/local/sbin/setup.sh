@@ -28,12 +28,12 @@ setup_cruise_control() {
     fi
 }
 
-add_cmak_env() {
-  /bin/echo "${1}='${2}'" >> {{ cmak_install_path }}/conf/environment
+add_cluster_manager_env() {
+  /bin/echo "${1}='${2}'" >> "{{ cmak_install_path }}/conf/environment"
 }
 
-setup_cmak() {
-  /usr/bin/sed -r -i -e "s|^ZK_HOSTS=.*|ZK_HOSTS=${ZOOKEEPER_CONNECT}|gm" {{ cmak_install_path }}/conf/environment
+setup_cluster_manager() {
+  /usr/bin/sed -r -i -e "s|^ZK_HOSTS=.*|ZK_HOSTS=${ZOOKEEPER_CONNECT}|gm" "{{ cmak_install_path }}/conf/environment"
 
   local km_pswd="${KAFKA_MANAGER_PASSWORD}"
   case "${km_pswd}" in
@@ -41,13 +41,13 @@ setup_cmak() {
   secrets/*) km_pswd="$(get_sm_secret "${km_pswd/secrets\//}")" ;;
   esac
 
-  add_cmak_env KAFKA_MANAGER_AUTH_ENABLED "${KAFKA_MANAGER_AUTH_ENABLED}"
-  add_cmak_env KAFKA_MANAGER_USERNAME "${KAFKA_MANAGER_USERNAME}"
-  add_cmak_env KAFKA_MANAGER_PASSWORD "${km_pswd}"
+  add_cluster_manager_env KAFKA_MANAGER_AUTH_ENABLED "${KAFKA_MANAGER_AUTH_ENABLED}"
+  add_cluster_manager_env KAFKA_MANAGER_USERNAME "${KAFKA_MANAGER_USERNAME}"
+  add_cluster_manager_env KAFKA_MANAGER_PASSWORD "${km_pswd}"
 
   /usr/bin/systemctl enable cmak.service
   /usr/bin/systemctl start cmak
 }
 
 setup_cruise_control
-setup_cmak
+setup_cluster_manager

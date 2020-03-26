@@ -52,13 +52,6 @@
     - environment
     - logback.xml
 
-- name: Install setup script
-  template:
-    src: usr/local/sbin/setup.sh
-    dest: /usr/local/sbin/setup.sh
-    owner: root
-    mode: 0700
-
 - name: Install service units
   template:
     src: systemd/cmak.service

@@ -9,8 +9,7 @@
     - system
     - zookeeper
     - kafka
-    - cruise-control
-    - cluster-manager
+    - manager
     - monitoring
     - verify
     - finalize
