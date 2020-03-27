@@ -333,6 +333,8 @@ data "template_file" "user_data" {
     cluster_name = "${var.prefix}-kafka"
     api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
     cruise_control_enabled = var.kafka_cluster_size > 1
+    cruise_control_username = var.admin_username
+    cruise_control_password = var.admin_password
     region = data.aws_region.this.name
     topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
   }

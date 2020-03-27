@@ -35,6 +35,7 @@
   loop:
     - log4j.properties
     - cruisecontrol.properties
+    - realm.properties
 
 - name: Install service units
   template:
