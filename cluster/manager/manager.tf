@@ -62,10 +62,6 @@ variable "lb_acm_certificate_arn" {
   default = ""
 }
 
-variable "lb_domain_name" {
-  default = ""
-}
-
 variable "public_zone_id" {
   default = ""
 }
@@ -399,13 +395,13 @@ resource "aws_instance" "server" {
 #################
 resource "aws_lb" "alb" {
   count = var.lb_enabled ? 1 : 0
+  enable_http2 = true
   internal = false
   load_balancer_type = "application"
   security_groups = [
     aws_security_group.lb.id
   ]
   subnets = data.aws_subnet.public.*.id
-  enable_http2 = true
 
   tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
 }
@@ -415,11 +411,11 @@ resource "aws_lb_target_group" "cruise" {
   name = "${var.prefix}-manager-cruise-http"
   port = local.cruise_http_port
   protocol = local.http_protocol
-  vpc_id = var.vpc_id
   health_check {
-    path = "/kafkacruisecontrol/state"
+    path = "/"
     protocol = local.http_protocol
   }
+  vpc_id = var.vpc_id
   tags = var.tags
 }
 
@@ -435,12 +431,12 @@ resource "aws_lb_target_group" "cluster" {
   name = "${var.prefix}-manager-cmak-http"
   port = local.manager_http_port
   protocol = local.http_protocol
-  vpc_id = var.vpc_id
   health_check {
     matcher = "200,302,401"
     path = "/cmak/api/health"
     protocol = local.http_protocol
   }
+  vpc_id = var.vpc_id
   tags = var.tags
 }
 
@@ -540,14 +536,20 @@ resource "aws_lb_listener_rule" "cruise-api" {
 #################
 # Routing
 #################
+data "aws_route53_zone" "public" {
+  count = var.lb_enabled ? 1 : 0
+  zone_id = var.public_zone_id
+  private_zone = false
+}
+
 resource "aws_route53_record" "public-alias" {
-  count = var.lb_enabled && length(var.lb_domain_name) > 0 ? 1 : 0
+  count = var.lb_enabled ? 1 : 0
   alias {
     evaluate_target_health = false
     name = aws_lb.alb[0].dns_name
     zone_id = aws_lb.alb[0].zone_id
   }
-  name = var.lb_domain_name
+  name = "manager.${var.prefix}.${data.aws_route53_zone.public[0].name}"
   type = "A"
   zone_id = var.public_zone_id
 }
@@ -555,18 +557,19 @@ resource "aws_route53_record" "public-alias" {
 #################
 # Outputs
 #################
-output "public_cruise_control_endpoint" {
-  value = var.lb_enabled ? format("%s://%s/", lower(local.http_protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/", aws_instance.server.private_ip, var.cruise_control_http_port)
+output "cruise_control_endpoint" {
+  value = format(
+    "%s://%s:%s/",
+    lower(local.http_protocol),
+    var.lb_enabled ? aws_route53_record.public-alias[0].name : aws_instance.server.private_ip,
+    var.lb_enabled ? "443" : local.cruise_http_port,
+  )
 }
-
-output "public_cluster_manager_endpoint" {
-  value = var.lb_enabled ? format("%s://%s/", lower(local.http_protocol), aws_lb.alb[0].dns_name) : format("http://%s:%s/cmak/", aws_instance.server.private_ip, var.cluster_manager_http_port)
-}
-
-output "cluster_manager_internal_http" {
-  value = format("http://%s:%s/cmak/", aws_instance.server.private_ip, var.cluster_manager_http_port)
-}
-
-output "cluster_manager_internal_https" {
-  value = format("https://%s:%s/cmak/", aws_instance.server.private_ip, var.cluster_manager_https_port)
+output "cluster_manager_endpoint" {
+  value = format(
+    "%s://%s:%s/cmak/",
+    lower(local.http_protocol),
+    var.lb_enabled ? aws_route53_record.public-alias[0].name : aws_instance.server.private_ip,
+    var.lb_enabled ? "443" : local.manager_http_port,
+  )
 }

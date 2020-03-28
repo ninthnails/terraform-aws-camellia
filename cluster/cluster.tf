@@ -25,10 +25,6 @@ variable "manager_lb_acm_certificate_arn" {
   default = ""
 }
 
-variable "manager_lb_domain_name" {
-  default = ""
-}
-
 variable "manager_lb_enabled" {
   default = true
 }
@@ -140,7 +136,6 @@ module "manager" {
   instance_type = var.manager_instance_type
   lb_acm_certificate_arn = var.manager_lb_acm_certificate_arn
   lb_enabled = var.manager_lb_enabled
-  lb_domain_name = var.manager_lb_domain_name
   kafka_cluster_size = var.kafka_cluster_size
   kafka_bootstrap_servers = module.kafka.bootstrap_servers_private
   kafka_zookeeper_connect = module.kafka.zookeeper_kafka_connect
@@ -164,17 +159,9 @@ output "kafka_bootstrap_servers_private" {
 }
 
 output "manager_cruise_control_endpoint" {
-  value = module.manager.public_cruise_control_endpoint
+  value = module.manager.cruise_control_endpoint
 }
 
 output "manager_cluster_manager_endpoint" {
-  value = module.manager.public_cluster_manager_endpoint
-}
-
-output "manager_cluster_manager_internal_http" {
-  value = module.manager.cluster_manager_internal_http
-}
-
-output "manager_cluster_manager_internal_https" {
-  value = module.manager.cluster_manager_internal_https
+  value = module.manager.cluster_manager_endpoint
 }

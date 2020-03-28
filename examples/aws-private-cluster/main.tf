@@ -92,11 +92,6 @@ data "aws_route53_zone" "local" {
   private_zone = true
 }
 
-data "aws_route53_zone" "public" {
-  zone_id = var.public_zone_id
-  private_zone = false
-}
-
 data "aws_ami" "camellia" {
   name_regex = "camellia-kafka-2.3.1-hvm-*"
   owners = ["self"]
@@ -116,12 +111,11 @@ module "cluster" {
   manager_admin_password = var.manager_admin_password
 
   // Example of no Load Balancer, internally accessible manager
-  manager_lb_enabled = false
+   manager_lb_enabled = false
 
    // Example of self signed certificate for development purpose
 //   manager_lb_enabled = true
 //   manager_lb_acm_certificate_arn = var.manager_lb_acm_certificate_arn
-//   manager_lb_domain_name = "manager.camellia.${data.aws_route53_zone.public.name}"
 
   vpc_id = data.aws_vpc.this.id
   private_subnet_ids = data.aws_subnet_ids.private.ids
@@ -149,10 +143,6 @@ output "kafka_bootstrap_servers_private" {
 
 output "manager_cruise_control_endpoint" {
   value = module.cluster.manager_cruise_control_endpoint
-}
-
-output "manager_cluster_manager_internal_http" {
-  value = module.cluster.manager_cluster_manager_internal_http
 }
 
 output "manager_cluster_manager_endpoint" {
