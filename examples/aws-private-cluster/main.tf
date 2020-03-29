@@ -5,11 +5,6 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
-variable "domain_name" {
-  // See https://tools.ietf.org/html/rfc2606#section-2
-  default = "local.example"
-}
-
 variable "ssh_key_name" {
 }
 

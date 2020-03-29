@@ -35,7 +35,7 @@ setup_cruise_control() {
     -e "s|^zookeeper\.connect=.*|zookeeper.connect=${KAFKA_ZOOKEEPER_CONNECT}|gm" \
     -e "s|^sample\.store\.topic\.replication\.factor=.*|sample.store.topic.replication.factor=${CRUISE_CONTROL_TOPIC_REPLICATION_FACTOR}|gm" \
     -e "s|^webserver\.security\.enable=.*|webserver.security.enable=true|g" \
-    -e "s|^webserver\.ssl\.enable=.*|webserver.ssl.enable=true|gm" \
+    -e "s|^webserver\.ssl\.enable=.*|webserver.ssl.enable=${CRUISE_CONTROL_SSL_ENABLED}|gm" \
     -e "s|^webserver\.ssl\.keystore\.password=.*|webserver.ssl.keystore.password=${storepass}|gm" \
     "{{ cruise_control_install_path }}/config/cruisecontrol.properties"
 

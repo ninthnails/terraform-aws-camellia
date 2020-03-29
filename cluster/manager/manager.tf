@@ -134,11 +134,11 @@ data "aws_subnet" "public" {
 locals {
   is_admin_password_systems_manager_parameter = length(regexall("^parameter/.*", var.admin_password)) > 0
   is_admin_password_secrets_manager_secret = length(regexall("^secrets/.*", var.admin_password)) > 0
-  is_lb_https_enabled = length(trimspace(var.lb_acm_certificate_arn)) > 0
+  is_https_enabled = var.lb_enabled && length(trimspace(var.lb_acm_certificate_arn)) > 0
 
-  http_protocol = var.lb_enabled && local.is_lb_https_enabled ? "HTTPS" : "HTTP"
-  cruise_http_port = var.lb_enabled && local.is_lb_https_enabled ? var.cruise_control_http_port : var.cruise_control_http_port
-  manager_http_port = var.lb_enabled && local.is_lb_https_enabled ? var.cluster_manager_https_port : var.cluster_manager_http_port
+  http_protocol = local.is_https_enabled ? "HTTPS" : "HTTP"
+  cruise_http_port = local.is_https_enabled ? var.cruise_control_http_port : var.cruise_control_http_port
+  manager_http_port = local.is_https_enabled ? var.cluster_manager_https_port : var.cluster_manager_http_port
 
   capacity_template = {brokerId: "%s", capacity: {DISK: "%s", CPU: "100", NW_IN: "%s", NW_OUT: "%s"}}
   capacity_default = format(jsonencode(local.capacity_template), "-1",
@@ -183,6 +183,7 @@ resource "aws_security_group_rule" "ingress-ssh" {
 }
 
 resource "aws_security_group_rule" "ingress-cruise" {
+  count = local.is_https_enabled ? 0 : 1
   description = "HTTP Cruise Control"
   type = "ingress"
   security_group_id = aws_security_group.private.id
@@ -195,6 +196,7 @@ resource "aws_security_group_rule" "ingress-cruise" {
 }
 
 resource "aws_security_group_rule" "ingress-manager" {
+  count = local.is_https_enabled ? 0 : 1
   description = "HTTP Cluster Manager for Apache Kafka"
   type = "ingress"
   security_group_id = aws_security_group.private.id
@@ -207,6 +209,7 @@ resource "aws_security_group_rule" "ingress-manager" {
 }
 
 resource "aws_security_group_rule" "ingress-manager-https" {
+  count = local.is_https_enabled ? 1 : 0
   description = "HTTPS Cluster Manager for Apache Kafka"
   type = "ingress"
   security_group_id = aws_security_group.private.id
@@ -222,7 +225,13 @@ resource "aws_security_group" "lb" {
   name_prefix = "${var.prefix}-manager-lb-"
   vpc_id = var.vpc_id
   description = "Security group for Kafka management tools"
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
+  egress {
+    from_port = 0
+    protocol = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+    to_port = 65535
+  }
   ingress {
     from_port = 80
     protocol = "TCP"
@@ -235,44 +244,7 @@ resource "aws_security_group" "lb" {
     to_port = 443
     cidr_blocks = var.allowed_cidrs.ipv4
   }
-  egress {
-    from_port = 0
-    protocol = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-    to_port = 65535
-  }
-}
-
-resource "aws_security_group" "public" {
-  count = var.lb_enabled ? 0 : 1
-  name_prefix = "${var.prefix}-manager-public-"
-  vpc_id = var.vpc_id
-  description = "Security group for Kafka management tools public access"
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-public"))
-  ingress {
-    description = "Cluster Manager for Apache Kafka"
-    from_port = var.cluster_manager_http_port
-    protocol = "TCP"
-    to_port = var.cluster_manager_http_port
-    cidr_blocks = var.allowed_cidrs.ipv4
-    ipv6_cidr_blocks = var.allowed_cidrs.ipv6
-  }
-  ingress {
-    description = "Cruise Control"
-    from_port = var.cruise_control_http_port
-    protocol = "TCP"
-    to_port = var.cruise_control_http_port
-    cidr_blocks = var.allowed_cidrs.ipv4
-    ipv6_cidr_blocks = var.allowed_cidrs.ipv6
-  }
-  egress {
-    from_port = 0
-    protocol = "TCP"
-    cidr_blocks = ["0.0.0.0/0"]
-    ipv6_cidr_blocks = ["::/0"]
-    to_port = 65535
-  }
+  tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
 }
 
 #################
@@ -361,6 +333,7 @@ data "template_file" "user_data" {
     api_endpoint = "/kafkacruisecontrol/"
     cruise_control_enabled = var.kafka_cluster_size > 1
     cruise_control_username = var.admin_username
+    cruise_control_ssl_enabled = local.is_https_enabled
     cruise_control_password = var.admin_password
     region = data.aws_region.this.name
     topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
@@ -394,7 +367,7 @@ resource "aws_instance" "server" {
 # Load Balancer
 #################
 resource "aws_lb" "alb" {
-  count = var.lb_enabled ? 1 : 0
+  count = local.is_https_enabled ? 1 : 0
   enable_http2 = true
   internal = false
   load_balancer_type = "application"
@@ -407,7 +380,7 @@ resource "aws_lb" "alb" {
 }
 
 resource "aws_lb_target_group" "cruise" {
-  count = var.lb_enabled ? 1 : 0
+  count = local.is_https_enabled ? 1 : 0
   name = "${var.prefix}-manager-cruise-http"
   port = local.cruise_http_port
   protocol = local.http_protocol
@@ -420,14 +393,14 @@ resource "aws_lb_target_group" "cruise" {
 }
 
 resource "aws_lb_target_group_attachment" "cruise" {
-  count = var.lb_enabled ? 1 : 0
+  count = local.is_https_enabled ? 1 : 0
   target_group_arn = aws_lb_target_group.cruise[0].arn
   target_id = aws_instance.server.id
   port = local.cruise_http_port
 }
 
 resource "aws_lb_target_group" "cluster" {
-  count = var.lb_enabled ? 1 : 0
+  count = local.is_https_enabled ? 1 : 0
   name = "${var.prefix}-manager-cmak-http"
   port = local.manager_http_port
   protocol = local.http_protocol
@@ -441,26 +414,14 @@ resource "aws_lb_target_group" "cluster" {
 }
 
 resource "aws_lb_target_group_attachment" "cluster" {
-  count = var.lb_enabled ? 1 : 0
+  count = local.is_https_enabled ? 1 : 0
   target_group_arn = aws_lb_target_group.cluster[0].arn
   target_id = aws_instance.server.id
   port = local.manager_http_port
 }
 
-resource "aws_lb_listener" "http" {
-  count = var.lb_enabled && !local.is_lb_https_enabled ? 1 : 0
-  load_balancer_arn = aws_lb.alb[0].arn
-  port = 80
-  protocol = "HTTP"
-
-  default_action {
-    type = "forward"
-    target_group_arn = aws_lb_target_group.cluster[0].arn
-  }
-}
-
 resource "aws_lb_listener" "https" {
-  count = var.lb_enabled && local.is_lb_https_enabled ? 1 : 0
+  count = local.is_https_enabled ? 1 : 0
   certificate_arn = var.lb_acm_certificate_arn
   load_balancer_arn = aws_lb.alb[0].arn
   port = 443
@@ -475,8 +436,8 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_lb_listener_rule" "manager" {
-  count = var.lb_enabled ? 1 : 0
-  listener_arn = local.is_lb_https_enabled ? aws_lb_listener.https[0].arn : aws_lb_listener.http[0].arn
+  count = local.is_https_enabled ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
   action {
     type = "forward"
     target_group_arn = aws_lb_target_group.cluster[0].arn
@@ -490,8 +451,8 @@ resource "aws_lb_listener_rule" "manager" {
 }
 
 resource "aws_lb_listener_rule" "cruise-static" {
-  count = var.lb_enabled ? 1 : 0
-  listener_arn = local.is_lb_https_enabled ? aws_lb_listener.https[0].arn : aws_lb_listener.http[0].arn
+  count = local.is_https_enabled ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
   action {
     type = "forward"
     target_group_arn = aws_lb_target_group.cruise[0].arn
@@ -505,8 +466,8 @@ resource "aws_lb_listener_rule" "cruise-static" {
 }
 
 resource "aws_lb_listener_rule" "cruise-ui" {
-  count = var.lb_enabled ? 1 : 0
-  listener_arn = local.is_lb_https_enabled ? aws_lb_listener.https[0].arn : aws_lb_listener.http[0].arn
+  count = local.is_https_enabled ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
   action {
     type = "forward"
     target_group_arn = aws_lb_target_group.cruise[0].arn
@@ -520,8 +481,8 @@ resource "aws_lb_listener_rule" "cruise-ui" {
 }
 
 resource "aws_lb_listener_rule" "cruise-api" {
-  count = var.lb_enabled ? 1 : 0
-  listener_arn = local.is_lb_https_enabled ? aws_lb_listener.https[0].arn : aws_lb_listener.http[0].arn
+  count = local.is_https_enabled ? 1 : 0
+  listener_arn = aws_lb_listener.https[0].arn
   action {
     type = "forward"
     target_group_arn = aws_lb_target_group.cruise[0].arn
@@ -565,6 +526,7 @@ output "cruise_control_endpoint" {
     var.lb_enabled ? "443" : local.cruise_http_port,
   )
 }
+
 output "cluster_manager_endpoint" {
   value = format(
     "%s://%s:%s/cmak/",
