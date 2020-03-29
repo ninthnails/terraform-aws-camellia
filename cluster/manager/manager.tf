@@ -247,6 +247,49 @@ resource "aws_security_group" "lb" {
   tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
 }
 
+resource "aws_security_group" "internal" {
+  count = var.lb_enabled ? 0 : 1
+  description = "Security group for Kafka management tools internal access"
+  name_prefix = "${var.prefix}-manager-internal-"
+  egress {
+    from_port = 0
+    protocol = "TCP"
+    cidr_blocks = ["0.0.0.0/0"]
+    ipv6_cidr_blocks = ["::/0"]
+    to_port = 65535
+  }
+  ingress {
+    description = "Cluster Manager HTTP"
+    from_port = var.cluster_manager_http_port
+    protocol = "TCP"
+    to_port = var.cluster_manager_http_port
+    cidr_blocks = var.allowed_cidrs.ipv4
+    ipv6_cidr_blocks = var.allowed_cidrs.ipv6
+  }
+  ingress {
+    description = "Cruise Control HTTP"
+    from_port = var.cruise_control_http_port
+    protocol = "TCP"
+    to_port = var.cruise_control_http_port
+    cidr_blocks = var.allowed_cidrs.ipv4
+    ipv6_cidr_blocks = var.allowed_cidrs.ipv6
+  }
+  vpc_id = var.vpc_id
+  tags = merge(var.tags, map("Name", "${var.prefix}-manager-internal"))
+}
+
+resource "aws_security_group_rule" "ingress-manager-https-internal" {
+  count = var.lb_enabled ? 0 : 1
+  description = "Cluster Manager HTTPS"
+  type = "ingress"
+  security_group_id = aws_security_group.internal[0].id
+  cidr_blocks = var.allowed_cidrs.ipv4
+  ipv6_cidr_blocks = var.allowed_cidrs.ipv6
+  from_port = var.cluster_manager_https_port
+  to_port = var.cluster_manager_https_port
+  protocol = "tcp"
+}
+
 #################
 # EC2 Instance
 #################
@@ -341,13 +384,12 @@ data "template_file" "user_data" {
 }
 
 resource "aws_instance" "server" {
+  associate_public_ip_address = !var.lb_enabled
   ami = var.ami_id
   iam_instance_profile = aws_iam_instance_profile.server.id
   instance_type = var.instance_type
-  subnet_id = data.aws_subnet.private[0].id
-  vpc_security_group_ids = [
-    aws_security_group.private.id
-  ]
+  subnet_id = var.lb_enabled ? data.aws_subnet.private[0].id : data.aws_subnet.public[0].id
+  vpc_security_group_ids = var.lb_enabled ? list(aws_security_group.private.id) : list(aws_security_group.private.id, aws_security_group.internal[0].id)
   key_name = var.key_pair_name
   ebs_optimized = false
   credit_specification {
@@ -361,6 +403,32 @@ resource "aws_instance" "server" {
   lifecycle {
     create_before_destroy = true
   }
+}
+
+data "aws_subnet" "private-az" {
+  count = var.lb_enabled ? 0 : 1
+  availability_zone = aws_instance.server.availability_zone
+  filter {
+    name = "subnet-id"
+    values = var.private_subnet_ids
+  }
+}
+
+resource "aws_network_interface" "private" {
+  count = var.lb_enabled ? 0 : 1
+  security_groups = [
+    aws_security_group.private.id
+  ]
+  subnet_id = data.aws_subnet.private-az[0].id
+
+  tags = merge(var.tags, map("Name", "${var.prefix}-manager-private"))
+}
+
+resource "aws_network_interface_attachment" "private" {
+  count = var.lb_enabled ? 0 : 1
+  device_index = 1
+  instance_id = aws_instance.server.id
+  network_interface_id = aws_network_interface.private[0].id
 }
 
 #################
@@ -498,7 +566,6 @@ resource "aws_lb_listener_rule" "cruise-api" {
 # Routing
 #################
 data "aws_route53_zone" "public" {
-  count = var.lb_enabled ? 1 : 0
   zone_id = var.public_zone_id
   private_zone = false
 }
@@ -510,7 +577,18 @@ resource "aws_route53_record" "public-alias" {
     name = aws_lb.alb[0].dns_name
     zone_id = aws_lb.alb[0].zone_id
   }
-  name = "manager.${var.prefix}.${data.aws_route53_zone.public[0].name}"
+  name = "manager.${var.prefix}.${data.aws_route53_zone.public.name}"
+  type = "A"
+  zone_id = var.public_zone_id
+}
+
+resource "aws_route53_record" "internal-alias" {
+  count = var.lb_enabled ? 0 : 1
+  name = "manager.${var.prefix}.${data.aws_route53_zone.public.name}"
+  records = [
+    aws_instance.server.public_ip
+  ]
+  ttl = 300
   type = "A"
   zone_id = var.public_zone_id
 }
@@ -522,7 +600,7 @@ output "cruise_control_endpoint" {
   value = format(
     "%s://%s:%s/",
     lower(local.http_protocol),
-    var.lb_enabled ? aws_route53_record.public-alias[0].name : aws_instance.server.private_ip,
+    var.lb_enabled ? aws_route53_record.public-alias[0].name : aws_route53_record.internal-alias[0].name,
     var.lb_enabled ? "443" : local.cruise_http_port,
   )
 }
@@ -531,7 +609,7 @@ output "cluster_manager_endpoint" {
   value = format(
     "%s://%s:%s/cmak/",
     lower(local.http_protocol),
-    var.lb_enabled ? aws_route53_record.public-alias[0].name : aws_instance.server.private_ip,
+    var.lb_enabled ? aws_route53_record.public-alias[0].name : aws_route53_record.internal-alias[0].name,
     var.lb_enabled ? "443" : local.manager_http_port,
   )
 }
