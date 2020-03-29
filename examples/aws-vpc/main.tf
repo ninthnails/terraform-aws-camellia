@@ -222,14 +222,6 @@ resource "aws_instance" "bastion" {
   }
 }
 
-resource "aws_route53_zone" "local" {
-  // See https://tools.ietf.org/html/rfc2606#section-2
-  name = "local.example"
-  vpc {
-    vpc_id = module.vpc.vpc_id
-  }
-}
-
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
@@ -240,10 +232,6 @@ output "private_subnets" {
 
 output "default_security_group_id" {
   value = module.vpc.default_security_group_id
-}
-
-output "local_zone" {
-  value = aws_route53_zone.local
 }
 
 output "bastion_public_ip" {

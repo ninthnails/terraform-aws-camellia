@@ -43,7 +43,7 @@ variable "instance_type" {
 }
 
 variable "lb_enabled" {
-  default = true
+  default = false
 }
 
 variable "allowed_cidrs" {

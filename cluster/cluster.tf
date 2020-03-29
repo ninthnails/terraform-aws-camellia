@@ -26,7 +26,7 @@ variable "manager_lb_acm_certificate_arn" {
 }
 
 variable "manager_lb_enabled" {
-  default = true
+  default = false
 }
 
 variable "public_zone_id" {

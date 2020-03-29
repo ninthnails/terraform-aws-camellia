@@ -81,12 +81,6 @@ data "aws_subnet_ids" "public" {
   }
 }
 
-data "aws_route53_zone" "local" {
-  name = "local.example."
-  vpc_id = data.aws_vpc.this.id
-  private_zone = true
-}
-
 data "aws_ami" "camellia" {
   name_regex = "camellia-kafka-2.3.1-hvm-*"
   owners = ["self"]
