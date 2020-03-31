@@ -15,7 +15,7 @@ This module depends on the availability of the
 [camellia-image-terraform](https://github.com/ninthnails/camellia-image-terraform) AMI in your AWS account.
 
 ## Usage
-```hcl-terraform
+```hcl
 module "cluster" {
   source = "https://github.com/ninthnails/camellia-terraform//cluster"
   version = "v1.0.0"
