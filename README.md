@@ -20,8 +20,8 @@ This module depends on the availability of the
 ## Usage
 ```hcl
 module "cluster" {
-  source = "github.com/ninthnails/terraform-aws-camellia"
-  version = "v1.0.0"
+  source  = "ninthnails/camellia/aws"
+  version = "1.0.0"
 
   manager_admin_password = "parameter/camellia-manager-admin-password"
   manager_lb_enabled = true
