@@ -1,4 +1,0 @@
----
-dependencies:
-  - { role: cruise-control }
-  - { role: cluster-manager }
