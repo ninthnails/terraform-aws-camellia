@@ -96,7 +96,7 @@ data "aws_ami" "camellia" {
 # Modules
 #################
 module "cluster" {
-  source = "../../cluster"
+  source = "../.."
   manager_admin_password = var.manager_admin_password
 
   // Example of no Load Balancer, internally accessible manager

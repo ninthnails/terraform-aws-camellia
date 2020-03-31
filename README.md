@@ -8,6 +8,9 @@ Yahoo [CMAK](https://github.com/yahoo/CMAK) and LinkedIn [Cruise Control](https:
 * Dedicated Apache Zookeeper cluster
 * Deployed with Yahoo [CMAK](https://github.com/yahoo/CMAK) (f.k.a Kafka Manager)
 * Integrated with LinkedIn [Cruise Control](https://github.com/linkedin/cruise-control)
+* Persistent EBS volumes for faster recovery
+* Automatic reboot and EC2 instance recovery on status check failures
+* EBS volumes encryption
 * Features from the **[camellia-image-terraform](https://github.com/ninthnails/camellia-image-terraform)** AMI
 
 ## Dependencies
@@ -17,7 +20,7 @@ This module depends on the availability of the
 ## Usage
 ```hcl
 module "cluster" {
-  source = "https://github.com/ninthnails/camellia-terraform//cluster"
+  source = "github.com/ninthnails/camellia-terraform"
   version = "v1.0.0"
 
   manager_admin_password = "parameter/camellia-manager-admin-password"
