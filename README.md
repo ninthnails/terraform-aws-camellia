@@ -11,16 +11,16 @@ Yahoo [CMAK](https://github.com/yahoo/CMAK) and LinkedIn [Cruise Control](https:
 * Persistent EBS volumes for faster recovery
 * Automatic reboot and EC2 instance recovery on status check failures
 * EBS volumes encryption
-* Features from the **[camellia-image-terraform](https://github.com/ninthnails/camellia-image-terraform)** AMI
+* Features from the **[terraform-aws-camellia-image](https://github.com/ninthnails/terraform-aws-camellia-image)** AMI
 
 ## Dependencies
 This module depends on the availability of the 
-[camellia-image-terraform](https://github.com/ninthnails/camellia-image-terraform) AMI in your AWS account.
+[terraform-aws-camellia-image](https://github.com/ninthnails/terraform-aws-camellia-image) AMI in your AWS account.
 
 ## Usage
 ```hcl
 module "cluster" {
-  source = "github.com/ninthnails/camellia-terraform"
+  source = "github.com/ninthnails/terraform-aws-camellia"
   version = "v1.0.0"
 
   manager_admin_password = "parameter/camellia-manager-admin-password"
