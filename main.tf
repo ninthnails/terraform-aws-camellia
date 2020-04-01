@@ -2,7 +2,7 @@
 # Modules
 #################
 module "zookeeper" {
-  source = "./zookeeper"
+  source = "./modules/zookeeper"
   prefix = var.prefix
   vpc_id = var.vpc_id
   subnet_ids = var.private_subnet_ids
@@ -14,7 +14,7 @@ module "zookeeper" {
 }
 
 module "kafka" {
-  source = "./kafka"
+  source = "./modules/kafka"
   prefix = var.prefix
   vpc_id = var.vpc_id
   private_subnet_ids = var.private_subnet_ids
@@ -31,7 +31,7 @@ module "kafka" {
 }
 
 module "manager" {
-  source = "./manager"
+  source = "./modules/manager"
   admin_password = var.manager_admin_password
   prefix = var.prefix
   vpc_id = var.vpc_id
