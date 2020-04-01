@@ -19,7 +19,7 @@ This module depends on the availability of the
 
 ## Usage
 ```hcl
-module "cluster" {
+module "camellia" {
   source  = "ninthnails/camellia/aws"
   version = "1.1.0"
 

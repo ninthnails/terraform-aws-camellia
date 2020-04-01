@@ -65,8 +65,7 @@ Once created use the certificate ARN for the `manager_lb_acm_certificate_arn` va
 
 ### AWS System Manager Parameter Store
 This will create a parameter holding the password for the admin user on the management tools, CMAK, Cruise Control, etc.
-**NOTE**: currently only plain `String` type is supported.
 ```shell script
 aws --region us-east-2 ssm put-parameter --name "parameter/camellia-manager-admin-password" \
-  --type String --value CHANGE_IT
+  --type SecureString --value CHANGE_IT
 ```
