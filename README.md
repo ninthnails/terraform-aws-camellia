@@ -21,7 +21,7 @@ This module depends on the availability of the
 ```hcl
 module "cluster" {
   source  = "ninthnails/camellia/aws"
-  version = "1.0.0"
+  version = "1.1.0"
 
   manager_admin_password = "parameter/camellia-manager-admin-password"
   manager_lb_enabled = true
