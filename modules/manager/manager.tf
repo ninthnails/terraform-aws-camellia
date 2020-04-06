@@ -258,24 +258,32 @@ resource "aws_security_group" "internal" {
     ipv6_cidr_blocks = ["::/0"]
     to_port = 65535
   }
-  ingress {
-    description = "Cluster Manager HTTP"
-    from_port = var.cluster_manager_http_port
-    protocol = "TCP"
-    to_port = var.cluster_manager_http_port
-    cidr_blocks = var.allowed_cidrs.ipv4
-    ipv6_cidr_blocks = var.allowed_cidrs.ipv6
-  }
-  ingress {
-    description = "Cruise Control HTTP"
-    from_port = var.cruise_control_http_port
-    protocol = "TCP"
-    to_port = var.cruise_control_http_port
-    cidr_blocks = var.allowed_cidrs.ipv4
-    ipv6_cidr_blocks = var.allowed_cidrs.ipv6
-  }
   vpc_id = var.vpc_id
   tags = merge(var.tags, map("Name", "${var.prefix}-manager-internal"))
+}
+
+resource "aws_security_group_rule" "ingress-manager-http-internal" {
+  count = var.lb_enabled ? 0 : 1
+  description = "Cluster Manager HTTP"
+  type = "ingress"
+  security_group_id = aws_security_group.internal[0].id
+  cidr_blocks = var.allowed_cidrs.ipv4
+  ipv6_cidr_blocks = var.allowed_cidrs.ipv6
+  from_port = var.cluster_manager_http_port
+  to_port = var.cluster_manager_http_port
+  protocol = "tcp"
+}
+
+resource "aws_security_group_rule" "ingress-cruise-http-internal" {
+  count = var.lb_enabled ? 0 : 1
+  description = "Cruise Control HTTP"
+  type = "ingress"
+  security_group_id = aws_security_group.internal[0].id
+  cidr_blocks = var.allowed_cidrs.ipv4
+  ipv6_cidr_blocks = var.allowed_cidrs.ipv6
+  from_port = var.cruise_control_http_port
+  to_port = var.cruise_control_http_port
+  protocol = "tcp"
 }
 
 resource "aws_security_group_rule" "ingress-manager-https-internal" {
