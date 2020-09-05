@@ -1,6 +1,6 @@
 # Private Camellia Cluster Example
 
-Terraform example module which creates a Camellia private cluster in a AWS VPC. The cluster will only be accessible  
+Terraform example module which creates a Camellia private cluster in an AWS VPC. The cluster will only be accessible  
 from within the VPC. The management tools are publicly accessible but restricted to define set of source IP addresses. 
 
 ## Requirements
@@ -14,8 +14,8 @@ To properly use this module, you will need:
 * A wildcard AWS Certificate Manager SSL/TLS certificate for your domain name
 
 ## Usage
-If you already meeting the requirements, create an auto variables file such as `example.auto.tfvars` with at minimum these.
-Otherwise see further below for more instructions.
+If you already meet the requirements, create an auto variables file such as `example.auto.tfvars` with at minimum these.
+Otherwise, see further below for more instructions.
 ```hcl-terraform
 aws_region = "us-east-2"
 kafka_cluster_size = 3
@@ -66,6 +66,6 @@ Once created use the certificate ARN for the `manager_lb_acm_certificate_arn` va
 ### AWS System Manager Parameter Store
 This will create a parameter holding the password for the admin user on the management tools, CMAK, Cruise Control, etc.
 ```shell script
-aws --region us-east-2 ssm put-parameter --name "parameter/camellia-manager-admin-password" \
+aws --region us-east-2 ssm put-parameter --name "camellia-manager-admin-password" \
   --type SecureString --value CHANGE_IT
 ```

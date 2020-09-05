@@ -82,7 +82,7 @@ data "aws_subnet_ids" "public" {
 }
 
 data "aws_ami" "camellia" {
-  name_regex = "camellia-kafka-2.3.1-hvm-*"
+  name_regex = "camellia-kafka-2.4.1-hvm-*"
   owners = ["self"]
   filter {
     name = "state"
