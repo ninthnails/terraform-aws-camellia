@@ -63,4 +63,12 @@ data "aws_ami" "camellia" {
 
 ## Examples
 * [AWS Private Cluster](examples/aws-private-cluster): A simple cluster only accessible from within the VPC.
- 
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 0.13 |
+| aws | >= 2.70 |
+| null | >= 3.1 |
+| template | >= 2.1 |

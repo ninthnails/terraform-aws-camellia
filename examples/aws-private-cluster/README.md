@@ -16,7 +16,7 @@ To properly use this module, you will need:
 ## Usage
 If you already meet the requirements, create an auto variables file such as `example.auto.tfvars` with at minimum these.
 Otherwise, see further below for more instructions.
-```hcl-terraform
+```hcl
 aws_region = "us-east-2"
 kafka_cluster_size = 3
 ssh_key_name = "my-ssh-key-pair-name"
@@ -32,7 +32,7 @@ manager_lb_acm_certificate_arn = "arn:aws:acm:us-east-2:111111111111:certificate
 ```
 
 Then run Terraform as usual:
-```shell script
+```shell
 terraform workspace new lab
 terraform init
 terraform plan -out terraform.tfplan
@@ -41,8 +41,8 @@ terraform apply terraform.tfplan
 Kafka bootstrap servers and other useful information will be printed out.
 
 
-When you are down, delete the resources.
-```shell script
+When you are done, delete the resources.
+```shell
 terraform destroy
 ```
 
@@ -57,15 +57,15 @@ Use the zone ID for the `public_zone_id` variable.
 _Optional if you want to use HTTPS on the load balance._
 This will request a public certificate to be issue for your domain name. Creation is complete only if you validate \
 ownership of the domain name by creating alias record in the (Route 53) DNS.
-```shell script
+```shell
 aws --region us-east-2 acm request-certificate --domain-name my-prefix.mydomainname.com \
-  --subject-alternative-names '*.my-prefix.mydomainname.com' --validation-method DNS 
+  --subject-alternative-names '*.my-prefix.mydomainname.com' --validation-method DNS
 ```
 Once created use the certificate ARN for the `manager_lb_acm_certificate_arn` variable.
 
 ### AWS System Manager Parameter Store
 This will create a parameter holding the password for the admin user on the management tools, CMAK, Cruise Control, etc.
-```shell script
+```shell
 aws --region us-east-2 ssm put-parameter --name "camellia-manager-admin-password" \
   --type SecureString --value CHANGE_IT
 ```

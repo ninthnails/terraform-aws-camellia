@@ -1,3 +1,13 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 2.70"
+    }
+  }
+  required_version = ">= 0.13"
+}
+
 variable "aws_region" {
   default = "us-east-1"
 }
@@ -6,16 +16,8 @@ variable "ssh_key_name" {
   default = "my-key"
 }
 
-variable "bastion_allowed_cidrs" {
-  type = list(string)
-  default = [
-    "10.0.0.0/16"
-  ]
-}
-
 provider "aws" {
   region = var.aws_region
-  version = "~> 2.45"
 }
 
 data "aws_availability_zones" "available" {
@@ -45,7 +47,7 @@ locals {
 
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
-  version = "2.22.0"
+  version = "2.78.0"
 
   name = "application"
 
@@ -158,70 +160,6 @@ resource "aws_route" "nat-private" {
   instance_id = aws_instance.nat.id
 }
 
-// Bastion
-data "aws_ami" "amzn2" {
-  most_recent = true
-  name_regex = "amzn2-ami-hvm*"
-  owners = [
-    "amazon"
-  ]
-}
-
-resource "aws_security_group" "bastion" {
-  name = "bastion"
-  vpc_id = module.vpc.vpc_id
-  ingress {
-    from_port = 22
-    protocol = "TCP"
-    to_port = 22
-    cidr_blocks = var.bastion_allowed_cidrs
-  }
-  egress {
-    description = "internet"
-    from_port = 0
-    protocol = "-1"
-    to_port = 0
-    cidr_blocks = [
-      "0.0.0.0/0"
-    ]
-  }
-  egress {
-    description = "private"
-    from_port = 0
-    protocol = "-1"
-    to_port = 0
-    cidr_blocks = module.vpc.private_subnets_cidr_blocks
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-  tags = {
-    Name = "bastion"
-  }
-}
-
-resource "aws_instance" "bastion" {
-  ami = data.aws_ami.amzn2.id
-  instance_type = "t3a.nano"
-  subnet_id = module.vpc.public_subnets[0]
-  vpc_security_group_ids = [aws_security_group.bastion.id]
-  ebs_optimized = false
-  monitoring = false
-  associate_public_ip_address = true
-  key_name = var.ssh_key_name
-  root_block_device {
-    volume_size = 10
-    delete_on_termination = true
-  }
-  lifecycle {
-    ignore_changes = [ami]
-    create_before_destroy = true
-  }
-  tags = {
-    Name = "bastion"
-  }
-}
-
 output "vpc_id" {
   value = module.vpc.vpc_id
 }
@@ -232,8 +170,4 @@ output "private_subnets" {
 
 output "default_security_group_id" {
   value = module.vpc.default_security_group_id
-}
-
-output "bastion_public_ip" {
-  value = aws_instance.bastion.public_ip
 }

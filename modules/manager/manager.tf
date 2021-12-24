@@ -360,6 +360,11 @@ resource "aws_iam_role_policy" "ssm" {
   role = aws_iam_role.server.id
 }
 
+resource "aws_iam_role_policy_attachment" "ssm-core" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  role = aws_iam_role.server.id
+}
+
 resource "aws_iam_role_policy" "secrets-manager" {
   count = local.is_admin_password_secrets_manager_secret ? 1 : 0
   name_prefix = "secrets-manager-"

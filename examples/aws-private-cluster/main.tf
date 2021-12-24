@@ -1,3 +1,21 @@
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 2.70"
+    }
+    null = {
+      source  = "hashicorp/null"
+      version = ">= 2.1"
+    }
+    template = {
+      source  = "hashicorp/template"
+      version = ">= 2.1"
+    }
+  }
+  required_version = ">= 0.13"
+}
+
 #################
 # Variables and Local Variables
 #################
@@ -31,20 +49,29 @@ variable "manager_lb_acm_certificate_arn" {
   default = ""
 }
 
+variable "zookeeper_instance_type" {
+  default = "t3a.nano"
+}
+
+variable "kafka_instance_type" {
+  default = "t3a.nano"
+}
+
+variable "manager_instance_type" {
+  default = "t3a.nano"
+}
+
 #################
 # Providers
 #################
 provider "aws" {
   region = var.aws_region
-  version = "~> 2.45"
 }
 
 provider "null" {
-  version = "~> 2.1"
 }
 
 provider "template" {
-  version = "~> 2.1"
 }
 
 #################
@@ -117,6 +144,10 @@ module "cluster" {
   kafka_storage_volume_type = "standard"
   kafka_cluster_size = var.kafka_cluster_size
   zookeeper_cluster_size = var.zookeeper_cluster_size
+
+  zookeeper_instance_type = var.zookeeper_instance_type
+  kafka_instance_type = var.kafka_instance_type
+  manager_instance_type = var.manager_instance_type
 }
 
 #################

@@ -74,7 +74,11 @@ variable "tags" {
 #################
 # Data and Local Variables
 #################
-data "aws_region" "current" {}
+data "aws_region" "current" {
+}
+
+data "aws_caller_identity" "this" {
+}
 
 data "aws_vpc" "this" {
   id = var.vpc_id
@@ -249,6 +253,53 @@ resource "aws_ebs_volume" "storage3" {
 #################
 # EC2 Instance
 #################
+data "aws_iam_policy_document" "assume" {
+  statement {
+    actions = [
+      "sts:AssumeRole"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = ["ec2.amazonaws.com"]
+      type = "Service"
+    }
+  }
+}
+
+resource "aws_iam_role" "broker" {
+  name = "${var.prefix}-kafka-broker"
+  assume_role_policy = data.aws_iam_policy_document.assume.json
+  tags = var.tags
+}
+
+resource "aws_iam_instance_profile" "broker" {
+  name = "${var.prefix}-kafka-broker"
+  path = aws_iam_role.broker.path
+  role = aws_iam_role.broker.id
+}
+
+resource "aws_iam_role_policy_attachment" "ssm" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  role = aws_iam_role.broker.id
+}
+
+data "aws_iam_policy_document" "kms" {
+  statement {
+    actions = [
+      "kms:Decrypt"
+    ]
+    effect = "Allow"
+    resources = [
+      "arn:aws:kms:*:${data.aws_caller_identity.this.account_id}:key/*"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "kms" {
+  policy = data.aws_iam_policy_document.kms.json
+  role = aws_iam_role.broker.id
+}
+
 data "template_file" "user_data" {
   count = var.cluster_size
   template = file("${path.module}/kafka-user-data.tpl")
@@ -285,6 +336,7 @@ resource "aws_instance" "broker" {
   ]
   count = var.cluster_size
   ami = var.ami_id
+  iam_instance_profile = aws_iam_instance_profile.broker.id
   instance_type = var.instance_type
   subnet_id = element(data.aws_subnet.private.*.id, count.index % length(data.aws_subnet.private.*.id))
   vpc_security_group_ids = [

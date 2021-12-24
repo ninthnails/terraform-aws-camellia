@@ -64,6 +64,9 @@ locals {
 data "aws_region" "this" {
 }
 
+data "aws_caller_identity" "this" {
+}
+
 data "aws_vpc" "this" {
   id = var.vpc_id
 }
@@ -163,6 +166,53 @@ resource "aws_network_interface" "zookeeper" {
 #################
 # EC2 Instances
 #################
+data "aws_iam_policy_document" "assume" {
+  statement {
+    actions = [
+      "sts:AssumeRole"
+    ]
+    effect = "Allow"
+    principals {
+      identifiers = ["ec2.amazonaws.com"]
+      type = "Service"
+    }
+  }
+}
+
+resource "aws_iam_role" "node" {
+  name = "${var.prefix}-kafka-zookeeper"
+  assume_role_policy = data.aws_iam_policy_document.assume.json
+  tags = var.tags
+}
+
+resource "aws_iam_instance_profile" "node" {
+  name = "${var.prefix}-kafka-zookeeper"
+  path = aws_iam_role.node.path
+  role = aws_iam_role.node.id
+}
+
+resource "aws_iam_role_policy_attachment" "ssm" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  role = aws_iam_role.node.id
+}
+
+data "aws_iam_policy_document" "kms" {
+  statement {
+    actions = [
+      "kms:Decrypt"
+    ]
+    effect = "Allow"
+    resources = [
+      "arn:aws:kms:*:${data.aws_caller_identity.this.account_id}:key/*"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "kms" {
+  policy = data.aws_iam_policy_document.kms.json
+  role = aws_iam_role.node.id
+}
+
 data "template_file" "user_data" {
   count = var.cluster_size
   template = file("${path.module}/zookeeper-user-data.tpl")
@@ -176,6 +226,7 @@ data "template_file" "user_data" {
 resource "aws_instance" "node" {
   count = var.cluster_size
   ami = var.ami_id
+  iam_instance_profile = aws_iam_instance_profile.node.id
   instance_type = var.instance_type
   lifecycle {
     ignore_changes = all
