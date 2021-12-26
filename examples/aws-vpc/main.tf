@@ -1,11 +1,5 @@
 terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 2.70"
-    }
-  }
-  required_version = ">= 0.13"
+  required_version = ">= 0.14"
 }
 
 variable "aws_region" {
@@ -47,7 +41,7 @@ locals {
 
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
-  version = "2.78.0"
+  version = "3.11.0"
 
   name = "application"
 

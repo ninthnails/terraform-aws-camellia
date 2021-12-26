@@ -84,13 +84,6 @@ data "aws_subnet" "private" {
   id = var.private_subnet_ids[count.index]
 }
 
-data "null_data_source" "broker-ids" {
-  count = var.cluster_size
-  inputs = {
-    id = count.index + 1
-  }
-}
-
 data "aws_kms_key" "provided" {
   key_id = var.kms_key_id
 }
@@ -465,8 +458,9 @@ resource "aws_network_interface_attachment" "broker" {
 output "bootstrap_servers_private" {
   value = join(",", formatlist("%s:${var.plaintext_port}", aws_network_interface.private.*.private_ip))
 }
+
 output "broker_ids" {
-  value = data.null_data_source.broker-ids.*.outputs.id
+  value = flatten(local.broker_ids)
 }
 
 output "zookeeper_kafka_connect" {

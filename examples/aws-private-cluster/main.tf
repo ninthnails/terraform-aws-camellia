@@ -1,21 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 2.70"
-    }
-    null = {
-      source  = "hashicorp/null"
-      version = ">= 2.1"
-    }
-    template = {
-      source  = "hashicorp/template"
-      version = ">= 2.1"
-    }
-  }
-  required_version = ">= 0.13"
-}
-
 #################
 # Variables and Local Variables
 #################
@@ -66,12 +48,6 @@ variable "manager_instance_type" {
 #################
 provider "aws" {
   region = var.aws_region
-}
-
-provider "null" {
-}
-
-provider "template" {
 }
 
 #################

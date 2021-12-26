@@ -66,9 +66,9 @@ data "aws_ami" "camellia" {
 
 ## Requirements
 
-| Name | Version |
-|------|---------|
-| terraform | >= 0.13 |
-| aws | >= 2.70 |
-| null | >= 3.1 |
-| template | >= 2.1 |
+| Name      | Version |
+|-----------|---------|
+| terraform | >= 0.14 |
+| aws       | >= 3.70 |
+| null      | >= 3.1  |
+| template  | >= 2.2  |
