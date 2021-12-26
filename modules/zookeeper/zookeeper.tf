@@ -160,7 +160,7 @@ resource "aws_network_interface" "zookeeper" {
   security_groups = [
     aws_security_group.zookeeper.id
   ]
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}-static"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-zookeeper-${count.index + 1}-static"})
 }
 
 #################
@@ -245,7 +245,7 @@ resource "aws_instance" "node" {
 
   user_data = data.template_file.user_data[count.index].rendered
 
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-zookeeper-${count.index + 1}"})
 }
 
 #################
@@ -269,7 +269,7 @@ resource "aws_cloudwatch_metric_alarm" "reboot" {
   dimensions = {
     InstanceId = aws_instance.node[count.index].id
   }
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}-reboot"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-zookeeper-${count.index + 1}-reboot"})
   lifecycle {
     create_before_destroy = true
   }
@@ -293,7 +293,7 @@ resource "aws_cloudwatch_metric_alarm" "recovery" {
   dimensions = {
     InstanceId = aws_instance.node[count.index].id
   }
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-zookeeper-${count.index + 1}-recovery"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-zookeeper-${count.index + 1}-recovery"})
   lifecycle {
     create_before_destroy = true
   }

@@ -1,10 +1,10 @@
 output "zookeeper_kafka_connect" {
-  description = "The endpoint to Apache Zookeper where Apache Kafka store it's state."
+  description = "The endpoint to Apache Zookeeper where Apache Kafka store it's state."
   value = module.kafka.zookeeper_kafka_connect
 }
 
 output "kafka_bootstrap_servers_private" {
-  description = "The endpoint for bootstraping connection to Apache Kafka cluster from within the cluster."
+  description = "The endpoint for bootstrapping connection to Apache Kafka cluster from within the cluster."
   value = module.kafka.bootstrap_servers_private
 }
 

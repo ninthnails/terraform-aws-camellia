@@ -158,7 +158,7 @@ resource "aws_security_group" "private" {
   name_prefix = "${var.prefix}-manager-private-"
   vpc_id = var.vpc_id
   description = "Security group for Cluster Manager for Apache Kafka"
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-private"))
+  tags = merge(var.tags, {Name: "${var.prefix}-manager-private"})
 }
 
 resource "aws_security_group_rule" "egress-all" {
@@ -244,7 +244,7 @@ resource "aws_security_group" "lb" {
     to_port = 443
     cidr_blocks = var.allowed_cidrs.ipv4
   }
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
+  tags = merge(var.tags, {Name: "${var.prefix}-manager-lb"})
 }
 
 resource "aws_security_group" "internal" {
@@ -259,7 +259,7 @@ resource "aws_security_group" "internal" {
     to_port = 65535
   }
   vpc_id = var.vpc_id
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-internal"))
+  tags = merge(var.tags, {Name: "${var.prefix}-manager-internal"})
 }
 
 resource "aws_security_group_rule" "ingress-manager-http-internal" {
@@ -319,7 +319,7 @@ data "aws_iam_policy_document" "assume" {
 resource "aws_iam_role" "server" {
   assume_role_policy = data.aws_iam_policy_document.assume.json
   name_prefix = "${var.prefix}-kafka-manager-server-"
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-manager-server"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-manager-server"})
 }
 
 resource "aws_iam_instance_profile" "server" {
@@ -402,7 +402,7 @@ resource "aws_instance" "server" {
   iam_instance_profile = aws_iam_instance_profile.server.id
   instance_type = var.instance_type
   subnet_id = var.lb_enabled ? data.aws_subnet.private[0].id : data.aws_subnet.public[0].id
-  vpc_security_group_ids = var.lb_enabled ? list(aws_security_group.private.id) : list(aws_security_group.private.id, aws_security_group.internal[0].id)
+  vpc_security_group_ids = var.lb_enabled ? [aws_security_group.private.id] : [aws_security_group.private.id, aws_security_group.internal[0].id]
   key_name = var.key_pair_name
   ebs_optimized = false
   credit_specification {
@@ -411,7 +411,7 @@ resource "aws_instance" "server" {
 
   user_data = data.template_file.user_data.rendered
 
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-manager"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-manager"})
 
   lifecycle {
     create_before_destroy = true
@@ -434,7 +434,7 @@ resource "aws_network_interface" "private" {
   ]
   subnet_id = data.aws_subnet.private-az[0].id
 
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-private"))
+  tags = merge(var.tags, {Name: "${var.prefix}-manager-private"})
 }
 
 resource "aws_network_interface_attachment" "private" {
@@ -457,7 +457,7 @@ resource "aws_lb" "alb" {
   ]
   subnets = data.aws_subnet.public.*.id
 
-  tags = merge(var.tags, map("Name", "${var.prefix}-manager-lb"))
+  tags = merge(var.tags, {Name: "${var.prefix}-manager-lb"})
 }
 
 resource "aws_lb_target_group" "cruise" {

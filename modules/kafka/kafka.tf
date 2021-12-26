@@ -96,7 +96,7 @@ locals {
   storage_ebs_flag = var.storage_type == "ebs" ? 1 : 0
   storage_instance_flag = var.storage_type == "instance" ? 1 : 0
   zookeeper_connect = "${var.zookeeper_connect}/kafka"
-  broker_ids = range(1, var.cluster_size + 1)
+  broker_ids = [for id in range(1, var.cluster_size + 1): id]
 }
 
 #################
@@ -106,7 +106,7 @@ resource "aws_security_group" "private" {
   name_prefix = "${var.prefix}-kafka-private-"
   vpc_id = var.vpc_id
   description = "Control access to Kafka brokers from private subnets"
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-private"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-private"})
 }
 
 resource "aws_security_group_rule" "private-egress-all" {
@@ -177,7 +177,7 @@ resource "aws_network_interface" "private" {
   security_groups = [
     aws_security_group.private.id
   ]
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-${local.broker_ids[count.index]}-private"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-${local.broker_ids[count.index]}-private"})
 }
 
 #################
@@ -190,7 +190,7 @@ resource "aws_ebs_volume" "storage1" {
   kms_key_id = data.aws_kms_key.provided.arn
   size = var.storage_volume_size
   type = var.storage_volume_type
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d1"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d1"})
   lifecycle {
     ignore_changes = [
       encrypted,
@@ -209,7 +209,7 @@ resource "aws_ebs_volume" "storage2" {
   kms_key_id = data.aws_kms_key.provided.arn
   size = var.storage_volume_size
   type = var.storage_volume_type
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d2"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d2"})
   lifecycle {
     ignore_changes = [
       encrypted,
@@ -228,7 +228,7 @@ resource "aws_ebs_volume" "storage3" {
   kms_key_id = data.aws_kms_key.provided.arn
   size = var.storage_volume_size
   type = var.storage_volume_type
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d3"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-d3"})
   lifecycle {
     ignore_changes = [
       encrypted,
@@ -341,7 +341,7 @@ resource "aws_instance" "broker" {
 
   user_data = data.template_file.user_data[count.index].rendered
 
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}", "broker.id", local.broker_ids[count.index]))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}", "broker.id": local.broker_ids[count.index]})
 
   lifecycle {
     ignore_changes = all
@@ -369,7 +369,7 @@ resource "aws_cloudwatch_metric_alarm" "reboot" {
   dimensions = {
     InstanceId = aws_instance.broker[count.index].id
   }
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-reboot"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-reboot"})
   lifecycle {
     create_before_destroy = true
   }
@@ -393,7 +393,7 @@ resource "aws_cloudwatch_metric_alarm" "recovery" {
   dimensions = {
     InstanceId = aws_instance.broker[count.index].id
   }
-  tags = merge(var.tags, map("Name", "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-recovery"))
+  tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}-recovery"})
   lifecycle {
     create_before_destroy = true
   }
@@ -460,7 +460,7 @@ output "bootstrap_servers_private" {
 }
 
 output "broker_ids" {
-  value = flatten(local.broker_ids)
+  value = local.broker_ids
 }
 
 output "zookeeper_kafka_connect" {
