@@ -21,7 +21,7 @@ This module depends on the availability of the
 ```hcl
 module "camellia" {
   source  = "ninthnails/camellia/aws"
-  version = "1.3.1"
+  version = "1.4.0"
 
   manager_admin_password = "parameter/camellia-manager-admin-password"
   manager_lb_enabled = true
