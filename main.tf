@@ -23,7 +23,6 @@ module "kafka" {
   ami_id = var.camellia_ami_id
   cluster_size = var.kafka_cluster_size
   zookeeper_connect = module.zookeeper.zookeeper_connect
-  private_zone_ids = var.private_zone_ids
   instance_type = var.kafka_instance_type
   storage_type = var.kafka_storage_type
   storage_volume_type = var.kafka_storage_volume_type

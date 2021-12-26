@@ -61,11 +61,6 @@ variable "storage_volume_size" {
 variable "zookeeper_connect" {
 }
 
-variable "private_zone_ids" {
-  type = list(string)
-  default = []
-}
-
 variable "tags" {
   type = map(string)
   default = {}
@@ -100,11 +95,11 @@ data "aws_kms_key" "provided" {
   key_id = var.kms_key_id
 }
 
+data "aws_ec2_instance_type" "selected" {
+  instance_type = var.instance_type
+}
+
 locals {
-  instance_type_support_recovery = contains(
-    ["a1", "c3", "c4", "c5", "c5n", "m3", "m4", "m5", "m5a", "m5n", "p3", "r3", "r4", "r5", "r5a", "r5n", "t2", "t3", "t3a", "x1", "x1e"],
-    split(".", var.instance_type)[0]
-  )
   storage_ebs_flag = var.storage_type == "ebs" ? 1 : 0
   storage_instance_flag = var.storage_type == "instance" ? 1 : 0
   zookeeper_connect = "${var.zookeeper_connect}/kafka"
@@ -159,7 +154,9 @@ resource "aws_security_group_rule" "private-ingress-plaintext" {
   from_port = var.plaintext_port
   to_port = var.plaintext_port
   protocol = "tcp"
-  cidr_blocks = data.aws_subnet.private.*.cidr_block
+  cidr_blocks = [
+    data.aws_vpc.this.cidr_block
+  ]
 }
 
 resource "aws_security_group_rule" "private-ingress-tls" {
@@ -313,7 +310,7 @@ data "template_file" "user_data" {
     default_replication_factor = var.cluster_size < 3 ? var.cluster_size : 3
     min_insync_replicas = var.cluster_size < 2 ? 1 : 2
     zookeeper = local.zookeeper_connect
-    bootstrap_servers = "PLAINTEXT://${length(var.private_zone_ids) > 0 ? aws_route53_record.private[0].fqdn : join(",", formatlist("%s:%s", aws_network_interface.private.*.private_ip, var.broker_port))}"
+    bootstrap_servers = "PLAINTEXT://${join(",", formatlist("%s:%s", aws_network_interface.private.*.private_ip, var.broker_port))}"
 
     // Format: ${listener_name}:${security_protocol}[,...]
     protocol_map = "BROKER:PLAINTEXT,CLIENT:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
@@ -362,7 +359,7 @@ resource "aws_instance" "broker" {
 # Alarms
 #################
 resource "aws_cloudwatch_metric_alarm" "reboot" {
-  count = local.instance_type_support_recovery ? length(aws_instance.broker) : 0
+  count = data.aws_ec2_instance_type.selected.auto_recovery_supported ? length(aws_instance.broker) : 0
   alarm_actions = [
     "arn:aws:automate:${data.aws_region.current.name}:ec2:reboot"
   ]
@@ -386,7 +383,7 @@ resource "aws_cloudwatch_metric_alarm" "reboot" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "recovery" {
-  count = local.instance_type_support_recovery ? length(aws_instance.broker) : 0
+  count = data.aws_ec2_instance_type.selected.auto_recovery_supported ? length(aws_instance.broker) : 0
   alarm_actions = [
     "arn:aws:automate:${data.aws_region.current.name}:ec2:recover"
   ]
@@ -463,28 +460,10 @@ resource "aws_network_interface_attachment" "broker" {
 }
 
 #################
-# Route53 Records
-#################
-data "aws_route53_zone" "private" {
-  count = length(var.private_zone_ids)
-  zone_id = var.private_zone_ids[count.index]
-}
-
-resource "aws_route53_record" "private" {
-  count = length(data.aws_route53_zone.private)
-
-  zone_id = data.aws_route53_zone.private[count.index].zone_id
-  name = "${var.prefix}-kafka-brokers.${data.aws_route53_zone.private[count.index].name}"
-  type = "A"
-  ttl = "3600"
-  records = aws_network_interface.private.*.private_ip
-}
-
-#################
 # Outputs
 #################
 output "bootstrap_servers_private" {
-  value = join(",", formatlist("%s:${var.plaintext_port}", length(var.private_zone_ids) > 0 ? aws_route53_record.private.*.fqdn : aws_network_interface.private.*.private_ip))
+  value = join(",", formatlist("%s:${var.plaintext_port}", aws_network_interface.private.*.private_ip))
 }
 output "broker_ids" {
   value = data.null_data_source.broker-ids.*.outputs.id

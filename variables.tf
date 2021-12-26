@@ -17,12 +17,6 @@ variable "public_subnet_ids" {
   type = list(string)
 }
 
-variable "private_zone_ids" {
-  default = []
-  description = "ID of the Route 53 Zones where internally used domain names will created. The zones must be private, i.e. attached to your VPC."
-  type = list(string)
-}
-
 variable "manager_lb_acm_certificate_arn" {
   default = ""
   description = "The ARN for the certificate in Certificate Manager to be used on the Application Load Balancer for the manager tools."

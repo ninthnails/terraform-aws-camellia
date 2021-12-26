@@ -127,11 +127,11 @@ module "cluster" {
   manager_admin_password = var.manager_admin_password
 
   // Example of no Load Balancer, internally accessible manager
-   manager_lb_enabled = false
+  manager_lb_enabled = false
 
    // Example of self signed certificate for development purpose
-//   manager_lb_enabled = true
-//   manager_lb_acm_certificate_arn = var.manager_lb_acm_certificate_arn
+//  manager_lb_enabled = true
+//  manager_lb_acm_certificate_arn = var.manager_lb_acm_certificate_arn
 
   vpc_id = data.aws_vpc.this.id
   private_subnet_ids = data.aws_subnet_ids.private.ids
