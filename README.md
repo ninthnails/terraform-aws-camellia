@@ -68,6 +68,6 @@ data "aws_ami" "camellia" {
 
 | Name      | Version |
 |-----------|---------|
-| terraform | >= 1.0  |
+| terraform | >= 1.1  |
 | aws       | >= 3.70 |
 | null      | >= 3.1  |
