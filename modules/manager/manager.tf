@@ -372,30 +372,6 @@ resource "aws_iam_role_policy" "secrets-manager" {
   role = aws_iam_role.server.id
 }
 
-data "template_file" "user_data" {
-  template = file("${path.module}/manager-user-data.tpl")
-
-  vars = {
-    admin_enabled = length(var.admin_username) > 0 && length(var.admin_password) > 0
-    admin_username = var.admin_username
-    admin_password = var.admin_password
-    kafka_bootstrap_servers = var.kafka_bootstrap_servers
-    kafka_zookeeper_connect = var.kafka_zookeeper_connect
-    zookeeper_connect = var.zookeeper_connect
-    capacity = "{ \"brokerCapacities\":[ ${local.capacity_default},${join(",", local.capacity_brokers)} ] }"
-    cluster_environment = var.environment
-    cluster_name = "${var.prefix}-kafka"
-//    api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
-    api_endpoint = "/kafkacruisecontrol/"
-    cruise_control_enabled = var.kafka_cluster_size > 1
-    cruise_control_username = var.admin_username
-    cruise_control_ssl_enabled = local.is_https_enabled
-    cruise_control_password = var.admin_password
-    region = data.aws_region.this.name
-    topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
-  }
-}
-
 resource "aws_instance" "server" {
   associate_public_ip_address = !var.lb_enabled
   ami = var.ami_id
@@ -409,7 +385,25 @@ resource "aws_instance" "server" {
     cpu_credits = "standard"
   }
 
-  user_data = data.template_file.user_data.rendered
+  user_data = templatefile("${path.module}/manager-user-data.tpl", {
+    admin_enabled = length(var.admin_username) > 0 && length(var.admin_password) > 0
+    admin_username = var.admin_username
+    admin_password = var.admin_password
+    kafka_bootstrap_servers = var.kafka_bootstrap_servers
+    kafka_zookeeper_connect = var.kafka_zookeeper_connect
+    zookeeper_connect = var.zookeeper_connect
+    capacity = "{ \"brokerCapacities\":[ ${local.capacity_default},${join(",", local.capacity_brokers)} ] }"
+    cluster_environment = var.environment
+    cluster_name = "${var.prefix}-kafka"
+    //    api_endpoint = format("%s/kafkacruisecontrol/", var.lb_enabled ? "${lower(aws_lb_listener.http[0].protocol)}//${aws_lb.alb[0].dns_name}" : "")
+    api_endpoint = "/kafkacruisecontrol/"
+    cruise_control_enabled = var.kafka_cluster_size > 1
+    cruise_control_username = var.admin_username
+    cruise_control_ssl_enabled = local.is_https_enabled
+    cruise_control_password = var.admin_password
+    region = data.aws_region.this.name
+    topic_replication_factor = var.kafka_cluster_size < 2 ? 1 : 2
+  })
 
   tags = merge(var.tags, {Name: "${var.prefix}-kafka-manager"})
 

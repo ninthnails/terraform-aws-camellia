@@ -290,33 +290,6 @@ resource "aws_iam_role_policy" "kms" {
   role = aws_iam_role.broker.id
 }
 
-data "template_file" "user_data" {
-  count = var.cluster_size
-  template = file("${path.module}/kafka-user-data.tpl")
-
-  vars = {
-    storage_set_size = 3
-    storage_type = var.storage_type
-
-    broker_id = local.broker_ids[count.index]
-    broker_rack = element(data.aws_subnet.private.*.availability_zone, count.index % length(data.aws_subnet.private.*.availability_zone))
-    default_replication_factor = var.cluster_size < 3 ? var.cluster_size : 3
-    min_insync_replicas = var.cluster_size < 2 ? 1 : 2
-    zookeeper = local.zookeeper_connect
-    bootstrap_servers = "PLAINTEXT://${join(",", formatlist("%s:%s", aws_network_interface.private.*.private_ip, var.broker_port))}"
-
-    // Format: ${listener_name}:${security_protocol}[,...]
-    protocol_map = "BROKER:PLAINTEXT,CLIENT:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
-
-    // Format: ${listener_name}://${host_or_ip_address}:${port_number}
-    broker_listener = "BROKER://${aws_network_interface.private[count.index].private_ip}:${var.broker_port}"
-    client_listener = "CLIENT://${aws_network_interface.private[count.index].private_ip}:${var.plaintext_port}"
-
-    broker_advertised_listener = "BROKER://${aws_network_interface.private[count.index].private_ip}:${var.broker_port}"
-    client_advertised_listener = "CLIENT://${aws_network_interface.private[count.index].private_ip}:${var.plaintext_port}"
-  }
-}
-
 resource "aws_instance" "broker" {
   depends_on = [
     aws_network_interface.private,
@@ -339,7 +312,27 @@ resource "aws_instance" "broker" {
     cpu_credits = "standard"
   }
 
-  user_data = data.template_file.user_data[count.index].rendered
+  user_data = templatefile("${path.module}/kafka-user-data.tpl", {
+    storage_set_size = 3
+    storage_type = var.storage_type
+
+    broker_id = local.broker_ids[count.index]
+    broker_rack = element(data.aws_subnet.private.*.availability_zone, count.index % length(data.aws_subnet.private.*.availability_zone))
+    default_replication_factor = var.cluster_size < 3 ? var.cluster_size : 3
+    min_insync_replicas = var.cluster_size < 2 ? 1 : 2
+    zookeeper = local.zookeeper_connect
+    bootstrap_servers = "PLAINTEXT://${join(",", formatlist("%s:%s", aws_network_interface.private.*.private_ip, var.broker_port))}"
+
+    // Format: ${listener_name}:${security_protocol}[,...]
+    protocol_map = "BROKER:PLAINTEXT,CLIENT:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+
+    // Format: ${listener_name}://${host_or_ip_address}:${port_number}
+    broker_listener = "BROKER://${aws_network_interface.private[count.index].private_ip}:${var.broker_port}"
+    client_listener = "CLIENT://${aws_network_interface.private[count.index].private_ip}:${var.plaintext_port}"
+
+    broker_advertised_listener = "BROKER://${aws_network_interface.private[count.index].private_ip}:${var.broker_port}"
+    client_advertised_listener = "CLIENT://${aws_network_interface.private[count.index].private_ip}:${var.plaintext_port}"
+  })
 
   tags = merge(var.tags, {Name: "${var.prefix}-kafka-broker-${local.broker_ids[count.index]}", "broker.id": local.broker_ids[count.index]})
 

@@ -213,16 +213,6 @@ resource "aws_iam_role_policy" "kms" {
   role = aws_iam_role.node.id
 }
 
-data "template_file" "user_data" {
-  count = var.cluster_size
-  template = file("${path.module}/zookeeper-user-data.tpl")
-
-  vars = {
-    node_id = count.index + 1
-    servers = join(",", local.zk_servers)
-  }
-}
-
 resource "aws_instance" "node" {
   count = var.cluster_size
   ami = var.ami_id
@@ -243,7 +233,10 @@ resource "aws_instance" "node" {
     cpu_credits = "standard"
   }
 
-  user_data = data.template_file.user_data[count.index].rendered
+  user_data = templatefile("${path.module}/zookeeper-user-data.tpl", {
+    node_id = count.index + 1
+    servers = join(",", local.zk_servers)
+  })
 
   tags = merge(var.tags, {Name: "${var.prefix}-kafka-zookeeper-${count.index + 1}"})
 }
